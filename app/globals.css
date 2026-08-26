@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Paleta da marca — verde "casa/despensa". */
+  --color-brand-50: oklch(0.97 0.02 155);
+  --color-brand-100: oklch(0.94 0.05 155);
+  --color-brand-200: oklch(0.88 0.09 155);
+  --color-brand-400: oklch(0.74 0.15 155);
+  --color-brand-500: oklch(0.66 0.16 155);
+  --color-brand-600: oklch(0.56 0.14 155);
+  --color-brand-700: oklch(0.46 0.11 155);
+
+  /* Altura reservada para a barra de navegação inferior. */
+  --spacing-nav: 5.5rem;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased;
+    /* Evita o zoom automático do iOS ao focar inputs. */
+    font-size: 16px;
+  }
+
+  /* Alvos de toque confortáveis em todo o app. */
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply touch-manipulation;
+  }
+}
+
+@utility safe-bottom {
+  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+}
