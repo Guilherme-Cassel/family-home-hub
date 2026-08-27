@@ -19,9 +19,17 @@ export const maxDuration = 60
 /** Teto de segurança por requisição, independente do lote pedido pelo cliente. */
 const MAX_FOTOS_POR_REQUISICAO = 16
 
-const PROMPT = `Você recebe fotos de produtos de supermercado, na ordem em que aparecem.
+/** Teto de itens do cadastro enviados no prompt, para não inflar o payload. */
+const MAX_ITENS_NO_PROMPT = 300
 
-Para CADA imagem, identifique o produto e devolve um objeto com:
+function montarPrompt(catalogo: { name: string }[]): string {
+  const lista = catalogo
+    .map((item, indice) => `[${indice}] ${item.name}`)
+    .join('\n')
+
+  return `Você recebe fotos de produtos de supermercado, na ordem em que aparecem.
+
+Para CADA imagem, identifique o produto e devolva um objeto com:
 - "indice": a posição da imagem, começando em 0, na ordem em que foram enviadas.
 - "nome_identificado": o nome genérico do produto em português do Brasil, sem
   marca e sem peso. Exemplos: "Arroz branco", "Leite integral", "Detergente".
@@ -30,10 +38,31 @@ Para CADA imagem, identifique o produto e devolve um objeto com:
   farmacia, outros.
 - "confianca": "alta" se você reconhece o produto com clareza, "media" se tem
   dúvida sobre o tipo exato, "baixa" se a foto está ruim, cortada ou ambígua.
+- "indice_cadastro": explicado abaixo.
+
+${
+  catalogo.length > 0
+    ? `Esta família já tem estes itens cadastrados na despensa:
+
+${lista}
+
+Em "indice_cadastro", devolva o número entre colchetes do item que for o MESMO
+produto da foto, mesmo que o nome esteja escrito de um jeito bem diferente.
+Por exemplo: uma foto de caixa de leite integral corresponde a "Caixinha de
+Leite 1L", e um pacote de café corresponde a "Café Pilão 500g" — é o mesmo
+produto, só nomeado de outro jeito.
+
+Use -1 quando o produto da foto não estiver na lista. Na dúvida entre dois
+itens, ou se não tiver certeza de que é o mesmo produto, use -1: quem revisa
+corrige em dois toques, mas um vínculo errado credita a compra no item errado
+e passa despercebido.`
+    : 'Não há itens cadastrados ainda, então use -1 em "indice_cadastro".'
+}
 
 Devolva exatamente um objeto por imagem recebida, na ordem dos índices.
 Não invente produtos que não estão nas fotos: prefira confiança "baixa" e nome
 vazio a chutar.`
+}
 
 const SCHEMA = {
   type: Type.ARRAY,
@@ -44,13 +73,24 @@ const SCHEMA = {
       nome_identificado: { type: Type.STRING },
       categoria_sugerida: { type: Type.STRING },
       confianca: { type: Type.STRING, enum: ['alta', 'media', 'baixa'] },
+      indice_cadastro: { type: Type.INTEGER },
     },
-    required: ['indice', 'nome_identificado', 'categoria_sugerida', 'confianca'],
+    required: [
+      'indice',
+      'nome_identificado',
+      'categoria_sugerida',
+      'confianca',
+      'indice_cadastro',
+    ],
   },
 }
 
 /** Descarta o que a IA devolveu fora do contrato, sem derrubar o lote todo. */
-function sanitizar(bruto: unknown, totalFotos: number): IdentificacaoIA[] {
+function sanitizar(
+  bruto: unknown,
+  totalFotos: number,
+  catalogo: { id: string }[],
+): IdentificacaoIA[] {
   if (!Array.isArray(bruto)) return []
 
   const confiancasValidas = new Set(['alta', 'media', 'baixa'])
@@ -69,6 +109,17 @@ function sanitizar(bruto: unknown, totalFotos: number): IdentificacaoIA[] {
 
     const confianca = String(registro.confianca ?? '').toLowerCase()
 
+    // O índice do cadastro é resolvido aqui, contra a lista real que foi
+    // enviada no prompt. Um índice inventado ou fora da faixa simplesmente
+    // não vira vínculo, em vez de apontar para o item errado.
+    const indiceCadastro = Number(registro.indice_cadastro)
+    const item =
+      Number.isInteger(indiceCadastro) &&
+      indiceCadastro >= 0 &&
+      indiceCadastro < catalogo.length
+        ? catalogo[indiceCadastro]
+        : null
+
     resultados.push({
       indice,
       nome_identificado: String(registro.nome_identificado ?? '').trim(),
@@ -76,6 +127,7 @@ function sanitizar(bruto: unknown, totalFotos: number): IdentificacaoIA[] {
       confianca: confiancasValidas.has(confianca)
         ? (confianca as IdentificacaoIA['confianca'])
         : 'baixa',
+      stock_item_id: item?.id ?? null,
     })
   }
 
@@ -112,6 +164,17 @@ export async function POST(request: Request) {
     )
   }
 
+  // O cadastro é lido aqui, no servidor, e não recebido do cliente: assim o
+  // índice devolvido pela IA é resolvido contra a lista de verdade, e não
+  // contra algo que veio no corpo da requisição.
+  const { data: catalogo } = await supabase
+    .from('stock_items')
+    .select('id, name')
+    .order('name')
+    .limit(MAX_ITENS_NO_PROMPT)
+
+  const itens = catalogo ?? []
+
   try {
     // Todas as imagens do lote vao numa chamada so. Com a cota diaria gratuita
     // em poucas dezenas de requisicoes, uma foto por requisicao inviabilizaria
@@ -121,7 +184,7 @@ export async function POST(request: Request) {
         {
           role: 'user',
           parts: [
-            { text: PROMPT },
+            { text: montarPrompt(itens) },
             ...fotos.map((foto) => ({
               inlineData: { mimeType: foto.mimeType, data: foto.data },
             })),
@@ -136,7 +199,7 @@ export async function POST(request: Request) {
     })
 
     const bruto = parseJsonDaIA<unknown>(response.text)
-    const resultados = sanitizar(bruto, fotos.length)
+    const resultados = sanitizar(bruto, fotos.length, itens)
 
     return NextResponse.json({ resultados })
   } catch (erro) {

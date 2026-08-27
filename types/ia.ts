@@ -19,6 +19,18 @@ export type IdentificacaoIA = {
   nome_identificado: string
   categoria_sugerida: string
   confianca: NivelConfianca
+  /**
+   * Item do cadastro que a IA reconheceu como sendo o mesmo produto, ou null.
+   *
+   * A comparação por texto não resolve "Leite integral" contra "Caixinha de
+   * Leite 1L" — são o mesmo produto com nomes distantes. Mandar o cadastro
+   * junto com as fotos deixa o modelo usar o que ele sabe do mundo em vez de
+   * a gente tentar adivinhar por similaridade de string.
+   *
+   * O índice devolvido pela IA é convertido para este id no servidor, contra
+   * a lista real, então um índice inventado nunca vira vínculo.
+   */
+  stock_item_id: string | null
 }
 
 /** Uma receita sugerida a partir do estoque atual. */

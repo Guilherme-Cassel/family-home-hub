@@ -118,24 +118,38 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
   // Etapa 2 — processamento
   // -------------------------------------------------------------------------
 
-  /** Aplica o casamento aproximado e decide o que já vai vinculado. */
+  /** Decide o que já vai vinculado, com dois sinais independentes. */
   function montarLinha(
     foto: FotoCapturada,
     nome: string,
     categoria: string,
     confianca: NivelConfianca,
+    stockItemId: string | null,
   ): Linha {
-    const correspondencia = nome ? melhorCorrespondencia(nome, itens) : null
+    // Sinal 1, mais forte: a própria IA apontou um item do cadastro. Ela vê a
+    // lista junto com as fotos e sabe que "Caixinha de Leite 1L" e uma caixa
+    // de leite integral são o mesmo produto — coisa que comparar texto nunca
+    // resolveria (essas duas pontuam 0.50, bem abaixo do limiar).
+    const escolhidoPelaIA =
+      stockItemId && confianca !== 'baixa'
+        ? (itens.find((item) => item.id === stockItemId) ?? null)
+        : null
 
-    // Vínculo automático exige similaridade alta E a própria IA confiante.
+    // Sinal 2, de reserva: similaridade de texto, para quando a IA não
+    // apontou nada mas o nome bate quase exatamente.
+    const correspondencia =
+      !escolhidoPelaIA && nome ? melhorCorrespondencia(nome, itens) : null
+
+    // Vínculo automático exige um dos dois sinais E a própria IA confiante.
     // Errar aqui credita a compra no item errado e só aparece quando a
     // despensa não bate — dois toques a mais na revisão saem mais barato.
-    const automatico =
+    const porTexto =
       correspondencia !== null &&
       correspondencia.pontuacao >= LIMIAR_MATCH_AUTOMATICO &&
       confianca !== 'baixa'
 
-    const vinculado = automatico ? correspondencia.item : null
+    const automatico = escolhidoPelaIA !== null || porTexto
+    const vinculado = escolhidoPelaIA ?? (porTexto ? correspondencia.item : null)
 
     return {
       fotoId: foto.id,
@@ -178,6 +192,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
               resultado?.nome_identificado ?? '',
               resultado?.categoria_sugerida ?? 'outros',
               resultado?.confianca ?? 'baixa',
+              resultado?.stock_item_id ?? null,
             ),
           )
         })
