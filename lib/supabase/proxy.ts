@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getSupabaseEnv } from './env'
+import type { Database } from '@/types/database'
 
 /** Rotas acessíveis sem sessão. */
 const PUBLIC_PATHS = ['/login', '/cadastro', '/auth']
@@ -19,7 +20,7 @@ export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request })
   const { url, key } = getSupabaseEnv()
 
-  const supabase = createServerClient(url, key, {
+  const supabase = createServerClient<Database>(url, key, {
     cookies: {
       getAll() {
         return request.cookies.getAll()
