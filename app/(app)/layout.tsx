@@ -1,5 +1,6 @@
 import { AppHeader } from '@/components/AppHeader'
 import { BottomNav } from '@/components/BottomNav'
+import { getNomeDoUsuario } from '@/lib/queries'
 import { requireUser } from '@/lib/supabase/auth'
 
 export default async function AppLayout({
@@ -7,10 +8,14 @@ export default async function AppLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const { user } = await requireUser()
 
-  const nome =
-    (user.user_metadata?.display_name as string | undefined) ??
-    user.email?.split('@')[0] ??
-    'você'
+  // Passa pelo perfil, não pelos metadados do usuário: além de ser o mesmo
+  // nome que aparece em "feito por Fulano", é aqui que o perfil é criado caso
+  // ainda não exista. Sem perfil, qualquer tentativa de gravar falharia na
+  // chave estrangeira de created_by.
+  const nome = await getNomeDoUsuario(
+    user.id,
+    user.email?.split('@')[0] ?? 'você',
+  )
 
   return (
     <div className="min-h-dvh">

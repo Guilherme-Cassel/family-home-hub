@@ -317,6 +317,10 @@ export type Database = {
         Args: { p_entries: Json }
         Returns: number
       }
+      ensure_profile: {
+        Args: Record<string, never>
+        Returns: Database['public']['Tables']['profiles']['Row']
+      }
     }
 
     Enums: Record<never, never>
