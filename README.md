@@ -6,6 +6,7 @@ O fluxo principal é a reposição por foto: você fotografa as compras no merca
 
 ## O que dá para fazer
 
+- **Acesso fechado** — sem tela de cadastro: as contas são criadas à mão no painel do Supabase, porque o app fica exposto na internet.
 - **Estoque** — cadastro, busca, filtro por categoria, e botões de consumir/repor direto na listagem. Selos de "abaixo do mínimo", "vence em N dias" e "vencido".
 - **Lista de compras** — montada sozinha com o que furou a quantidade mínima, mais itens avulsos para compras pontuais.
 - **Entrada em massa** — por foto (com IA) ou digitando numa tabela com autocomplete.
@@ -46,7 +47,23 @@ npm install
 
 Os scripts são idempotentes: rodar de novo não quebra nada.
 
-**Dica para uso doméstico:** em **Authentication → Providers → Email**, desligue *Confirm email*. Sem isso, cada pessoa da casa precisa clicar num link de confirmação antes do primeiro acesso.
+### 2.1. Fechar o cadastro aberto — obrigatório
+
+O app **não tem tela de criar conta**, de propósito: ele fica exposto na internet, e auto-cadastro aberto deixaria qualquer um entrar, mexer nos dados da casa e gastar a cota da API do Gemini.
+
+**Mas remover a tela não protege nada sozinho.** A chave pública do Supabase vai no bundle do navegador por natureza, e com ela dá para chamar o endpoint de cadastro direto, sem passar pela interface. O bloqueio de verdade é no painel:
+
+**Authentication → Sign In / Providers → Email → desmarque _Allow new users to sign up_ → Save.**
+
+Enquanto isso estiver ligado, o cadastro continua aberto mesmo sem tela nenhuma no app.
+
+### 2.2. Criar as contas da família
+
+Com o cadastro fechado, as contas passam a ser criadas à mão:
+
+**Authentication → Users → Add user** → e-mail e senha → marque **Auto Confirm User** (senão a pessoa fica presa esperando um e-mail de confirmação).
+
+O perfil correspondente é criado sozinho no primeiro acesso, então não é preciso mexer em mais nada. O nome exibido vira o começo do e-mail; para escolher outro, preencha `display_name` em **User Metadata** na hora de criar.
 
 ### 3. Gerar a chave do Gemini
 
@@ -76,7 +93,7 @@ Preencha:
 npm run dev
 ```
 
-Abra `http://localhost:3000`, crie sua conta e comece pelo estoque.
+Abra `http://localhost:3000` e entre com a conta que você criou no painel do Supabase.
 
 Outros comandos:
 

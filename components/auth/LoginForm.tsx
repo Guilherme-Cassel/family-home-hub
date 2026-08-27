@@ -1,6 +1,5 @@
 'use client'
 
-import Link from 'next/link'
 import { useActionState } from 'react'
 import { signIn, type AuthState } from '@/app/(auth)/actions'
 import { Alert } from '@/components/Alert'
@@ -44,11 +43,10 @@ export function LoginForm({ redirecionar }: { redirecionar: string }) {
         Entrar
       </SubmitButton>
 
-      <p className="text-center text-sm text-slate-600">
-        Ainda não tem conta?{' '}
-        <Link href="/cadastro" className="font-medium text-brand-700 underline">
-          Criar conta
-        </Link>
+      {/* Sem link de cadastro: as contas da casa são criadas à mão no painel
+          do Supabase, e não pela internet aberta. */}
+      <p className="text-center text-xs text-slate-500">
+        O acesso é criado por quem administra o app.
       </p>
     </form>
   )

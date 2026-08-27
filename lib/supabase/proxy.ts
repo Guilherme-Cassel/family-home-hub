@@ -4,7 +4,7 @@ import { getSupabaseEnv } from './env'
 import type { Database } from '@/types/database'
 
 /** Rotas acessíveis sem sessão. */
-const PUBLIC_PATHS = ['/login', '/cadastro', '/auth']
+const PUBLIC_PATHS = ['/login', '/auth']
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -52,7 +52,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  if (user && (pathname === '/login' || pathname === '/cadastro')) {
+  if (user && pathname === '/login') {
     const homeUrl = request.nextUrl.clone()
     homeUrl.pathname = '/'
     homeUrl.search = ''
