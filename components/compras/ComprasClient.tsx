@@ -16,9 +16,17 @@ import { Card } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
 import { Input } from '@/components/Field'
 import { SubmitButton } from '@/components/SubmitButton'
-import { IconCamera, IconTrash } from '@/components/icons'
+import { IconCamera, IconCheck, IconCopy, IconTrash } from '@/components/icons'
+import { copiarTexto } from '@/lib/clipboard'
 import { rotuloCategoriaEstoque } from '@/lib/constants'
-import { formatarQuantidade } from '@/lib/formatters'
+import { formatarMoeda, formatarQuantidade } from '@/lib/formatters'
+import {
+  calcularEstimativa,
+  faltaComprar,
+  linhaDoAvulso,
+  linhaDoEstoque,
+  montarTextoDaLista,
+} from '@/lib/listaCompras'
 import type { ShoppingExtra, StockItem } from '@/types/domain'
 
 const ESTADO_INICIAL: FormState = {}
@@ -52,9 +60,40 @@ export function ComprasClient({ faltando, avulsos }: Props) {
     })
   }
 
-  const totalPendente =
-    faltando.length + avulsos.filter((item) => !item.is_done).length
+  const pendentesAvulsos = avulsos.filter((item) => !item.is_done)
+  const totalPendente = faltando.length + pendentesAvulsos.length
   const temConcluidos = avulsos.some((item) => item.is_done)
+
+  // Só o que ainda falta comprar entra na conta e no texto copiado: item já
+  // marcado no carrinho não deveria aparecer na mensagem mandada para alguém.
+  //
+  // Sem useMemo de propósito: são dezenas de itens, e memoizar aqui só
+  // adicionaria lista de dependências para manter em dia.
+  const linhas = [
+    ...faltando.map(linhaDoEstoque),
+    ...pendentesAvulsos.map(linhaDoAvulso),
+  ]
+  const estimativa = calcularEstimativa(linhas)
+
+  const [copia, setCopia] = useState<'parado' | 'copiado' | 'falhou'>('parado')
+  const [textoParaSelecionar, setTextoParaSelecionar] = useState<string | null>(null)
+
+  async function copiar() {
+    const texto = montarTextoDaLista(linhas, estimativa)
+    const deuCerto = await copiarTexto(texto)
+
+    if (deuCerto) {
+      setCopia('copiado')
+      setTextoParaSelecionar(null)
+      window.setTimeout(() => setCopia('parado'), 2500)
+      return
+    }
+
+    // Sem contexto seguro e sem execCommand, resta oferecer para copiar à mão
+    // em vez de fingir que deu certo.
+    setCopia('falhou')
+    setTextoParaSelecionar(texto)
+  }
 
   return (
     <div className="space-y-5">
@@ -66,6 +105,60 @@ export function ComprasClient({ faltando, avulsos }: Props) {
             : `${totalPendente} ${totalPendente === 1 ? 'item pendente' : 'itens pendentes'}.`}
         </p>
       </div>
+
+      {totalPendente > 0 ? (
+        <Card className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+                Estimativa da compra
+              </p>
+              <p className="text-2xl font-semibold tabular-nums text-slate-900">
+                {estimativa.comPreco > 0 ? formatarMoeda(estimativa.total) : '—'}
+              </p>
+            </div>
+
+            <Button variant="secondary" onClick={copiar}>
+              {copia === 'copiado' ? (
+                <>
+                  <IconCheck width={18} height={18} />
+                  Copiado
+                </>
+              ) : (
+                <>
+                  <IconCopy width={18} height={18} />
+                  Copiar
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* O que a estimativa não cobre precisa ficar visível: um total que
+              ignora metade da lista em silêncio engana mais do que ajuda. */}
+          <p className="text-xs text-slate-500">
+            {estimativa.comPreco === 0
+              ? 'Nenhum item tem preço de referência ainda. O preço é aprendido quando você registra uma compra com valor.'
+              : estimativa.semPreco > 0
+                ? `Baseada em ${estimativa.comPreco} de ${linhas.length} itens — ${estimativa.semPreco} ainda ${estimativa.semPreco === 1 ? 'não tem preço' : 'não têm preço'} de referência.`
+                : `Baseada no último preço pago de todos os ${linhas.length} itens.`}
+          </p>
+
+          {textoParaSelecionar ? (
+            <div className="space-y-1">
+              <p className="text-xs text-amber-700">
+                Este navegador não deixou copiar sozinho. Selecione o texto abaixo:
+              </p>
+              <textarea
+                readOnly
+                value={textoParaSelecionar}
+                rows={Math.min(12, linhas.length + 5)}
+                onFocus={(e) => e.currentTarget.select()}
+                className="w-full rounded-xl bg-slate-50 p-2 font-mono text-xs text-slate-700 ring-1 ring-slate-300"
+              />
+            </div>
+          ) : null}
+        </Card>
+      ) : null}
 
       {erro ? <Alert>{erro}</Alert> : null}
 
@@ -93,10 +186,17 @@ export function ComprasClient({ faltando, avulsos }: Props) {
                       <span className="text-xs text-slate-500">
                         Tem {formatarQuantidade(item.current_quantity)} {item.unit} ·
                         mínimo {formatarQuantidade(item.minimum_quantity)} {item.unit}
+                        {item.last_price
+                          ? ` · ${formatarMoeda(item.last_price)}/${item.unit}`
+                          : ''}
                       </span>
                     </div>
                   </Link>
-                  <Badge tone="danger">Repor</Badge>
+
+                  {/* O que interessa no carrinho é a diferença, não o mínimo. */}
+                  <Badge tone="danger">
+                    Levar {formatarQuantidade(faltaComprar(item))} {item.unit}
+                  </Badge>
                 </Card>
               </li>
             ))}
