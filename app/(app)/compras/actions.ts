@@ -1,7 +1,9 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { LIMIAR_MATCH_AUTOMATICO, melhorCorrespondencia } from '@/lib/fuzzyMatch'
 import { requireUser } from '@/lib/supabase/auth'
+import { normalizar } from '@/lib/texto'
 
 export type FormState = { error?: string }
 
@@ -62,10 +64,32 @@ export async function adicionarFaltantes(nomes: string[]): Promise<FormState> {
     return { error: `Não foi possível ler a lista: ${erroLeitura.message}` }
   }
 
+  // A lista de compras tem duas origens, e o ingrediente pode já estar em
+  // qualquer uma delas. Conferir só os avulsos deixava o mesmo item aparecer
+  // duas vezes, em seções diferentes: o caso comum é um item de estoque
+  // zerado, que a IA nunca vê (ela só recebe quantidade acima de zero) e
+  // portanto reporta como faltando, mas que já está listado por estar abaixo
+  // do mínimo.
+  const { data: doEstoque } = await supabase
+    .from('stock_items')
+    .select('id, name')
+    .eq('is_below_minimum', true)
+
   const jaNaLista = new Set(
-    (existentes ?? []).map((item) => item.name.trim().toLowerCase()),
+    (existentes ?? []).map((item) => normalizar(item.name)),
   )
-  const novos = limpos.filter((nome) => !jaNaLista.has(nome.toLowerCase()))
+
+  const novos = limpos.filter((nome) => {
+    if (jaNaLista.has(normalizar(nome))) return false
+
+    // Mesma tolerância do casamento por foto: "Manteiga" não deveria virar
+    // avulso se o estoque já pede "Manteiga sem sal".
+    const correspondencia = melhorCorrespondencia(nome, doEstoque ?? [])
+    return (
+      correspondencia === null ||
+      correspondencia.pontuacao < LIMIAR_MATCH_AUTOMATICO
+    )
+  })
 
   if (novos.length === 0) return {}
 
