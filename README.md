@@ -109,9 +109,17 @@ O app é mobile-first. Vale abrir no celular e usar "Adicionar à tela de iníci
 
 ### Supabase pausa depois de 7 dias sem uso
 
-Projetos no plano gratuito do Supabase são **pausados automaticamente após 7 dias de inatividade**. Não é bug do app: quando isso acontece, o login simplesmente para de funcionar até alguém reativar o projeto pelo painel do Supabase, o que leva alguns minutos e não perde dados.
+Projetos no plano gratuito do Supabase são **pausados automaticamente após 7 dias de inatividade**. Quando isso acontece, o login para de funcionar até alguém reativar o projeto pelo painel — leva alguns minutos e não perde dados.
 
-Para uma família que usa o app toda semana, isso raramente acontece. Se acontecer com frequência, uma evolução futura seria um **ping semanal via GitHub Actions** — um workflow agendado que faz uma requisição simples ao projeto e reinicia a contagem de inatividade. Não está implementado aqui de propósito, para não adicionar infraestrutura antes de o problema aparecer.
+Para evitar isso, `vercel.json` agenda um **ping diário** em `/api/cron/keep-alive`, que faz uma consulta mínima ao banco e reinicia a contagem. A consulta é anônima de propósito: sem sessão a RLS devolve zero linhas, mas a requisição atravessa o PostgREST até o Postgres do mesmo jeito, que é o que conta como atividade.
+
+Três decisões nesse desenho:
+
+- **Vercel Cron, não GitHub Actions.** O GitHub **desativa workflows agendados após 60 dias sem atividade no repositório** — um workflow criado para combater inatividade seria desligado justamente por inatividade, em silêncio.
+- **Diário, não semanal.** O plano Hobby limita crons a uma execução por dia e tem precisão de ±59 minutos. Agendar semanalmente raspa no limite de 7 dias sem margem; diário custa uma invocação trivial e dá folga de 7×.
+- **A rota fica fora do matcher do proxy.** Quem chama é o agendador, que não tem sessão — sem essa exceção o ping seria redirecionado para o login e nunca encostaria no banco, falhando em silêncio até o projeto ser pausado. A autenticação dela é própria, por `CRON_SECRET`.
+
+Configure `CRON_SECRET` nas variáveis da Vercel com um valor aleatório; a Vercel o envia no cabeçalho `Authorization` ao disparar o cron. Sem ele o endpoint continua funcionando, mas fica aberto — e a resposta avisa isso.
 
 ### A escolha do modelo do Gemini
 
