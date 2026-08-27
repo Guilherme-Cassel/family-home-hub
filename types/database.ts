@@ -89,7 +89,22 @@ export type Database = {
           created_by?: string | null
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'stock_items_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'stock_items_updated_by_fkey'
+            columns: ['updated_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
 
       stock_movements: {
@@ -120,7 +135,22 @@ export type Database = {
           created_at?: string
           created_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'stock_movements_stock_item_id_fkey'
+            columns: ['stock_item_id']
+            isOneToOne: false
+            referencedRelation: 'stock_items'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'stock_movements_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
 
       shopping_list_extras: {
@@ -188,7 +218,22 @@ export type Database = {
           created_by?: string | null
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'maintenance_items_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'maintenance_items_updated_by_fkey'
+            columns: ['updated_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
 
       maintenance_log: {
@@ -216,7 +261,22 @@ export type Database = {
           notes?: string | null
           created_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'maintenance_log_maintenance_item_id_fkey'
+            columns: ['maintenance_item_id']
+            isOneToOne: false
+            referencedRelation: 'maintenance_items'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'maintenance_log_done_by_fkey'
+            columns: ['done_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
       }
 
       app_settings: {

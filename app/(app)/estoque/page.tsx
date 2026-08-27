@@ -1,14 +1,28 @@
-import { Card } from '@/components/Card'
+import { Alert } from '@/components/Alert'
+import { EstoqueClient } from '@/components/estoque/EstoqueClient'
+import { getDiasAvisoValidade } from '@/lib/queries'
+import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Estoque · Casa em Ordem' }
 
-export default function Page() {
+export default async function EstoquePage() {
+  const supabase = await createClient()
+
+  const [{ data: itens, error }, diasAvisoValidade] = await Promise.all([
+    supabase.from('stock_items').select('*').order('name'),
+    getDiasAvisoValidade(),
+  ])
+
+  if (error) {
+    return (
+      <Alert>
+        Não foi possível carregar o estoque: {error.message}. Verifique a conexão
+        e recarregue a página.
+      </Alert>
+    )
+  }
+
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Estoque</h1>
-      <Card>
-        <p className="text-sm text-slate-600">Em construção.</p>
-      </Card>
-    </div>
+    <EstoqueClient itens={itens ?? []} diasAvisoValidade={diasAvisoValidade} />
   )
 }
