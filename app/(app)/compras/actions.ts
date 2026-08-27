@@ -41,6 +41,47 @@ export async function adicionarAvulso(
   return {}
 }
 
+/**
+ * Joga na lista de compras os ingredientes que faltam para uma receita.
+ *
+ * Ignora o que já está na lista em aberto, para não duplicar quando o usuário
+ * pede duas receitas que precisam do mesmo item.
+ */
+export async function adicionarFaltantes(nomes: string[]): Promise<FormState> {
+  const { supabase } = await requireUser()
+
+  const limpos = [...new Set(nomes.map((nome) => nome.trim()).filter(Boolean))]
+  if (limpos.length === 0) return { error: 'Nenhum ingrediente para adicionar.' }
+
+  const { data: existentes, error: erroLeitura } = await supabase
+    .from('shopping_list_extras')
+    .select('name')
+    .eq('is_done', false)
+
+  if (erroLeitura) {
+    return { error: `Não foi possível ler a lista: ${erroLeitura.message}` }
+  }
+
+  const jaNaLista = new Set(
+    (existentes ?? []).map((item) => item.name.trim().toLowerCase()),
+  )
+  const novos = limpos.filter((nome) => !jaNaLista.has(nome.toLowerCase()))
+
+  if (novos.length === 0) return {}
+
+  const { error } = await supabase
+    .from('shopping_list_extras')
+    .insert(novos.map((name) => ({ name })))
+
+  if (error) {
+    return { error: `Não foi possível adicionar à lista: ${error.message}` }
+  }
+
+  revalidatePath('/compras')
+  revalidatePath('/')
+  return {}
+}
+
 export async function alternarAvulso(
   id: string,
   concluido: boolean,

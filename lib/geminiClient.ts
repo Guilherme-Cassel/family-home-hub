@@ -52,19 +52,19 @@ export async function identificarFotos(
   return resultados
 }
 
-/** Pede sugestões de receita a partir dos alimentos em estoque. */
-export async function sugerirReceitas(
-  ingredientes: {
-    nome: string
-    quantidade: number
-    unidade: string
-    validade: string | null
-  }[],
-): Promise<ReceitaIA[]> {
-  const { receitas } = await postJson<{ receitas: ReceitaIA[] }>(
+/**
+ * Pede sugestões de receita a partir dos alimentos em estoque.
+ *
+ * Não recebe os ingredientes: a rota lê o estoque no servidor, com a mesma
+ * sessão. É a mesma informação, com menos dados trafegando e sem depender do
+ * que o cliente resolveu mandar.
+ */
+export async function sugerirReceitas(): Promise<{
+  receitas: ReceitaIA[]
+  aviso?: string
+}> {
+  return postJson<{ receitas: ReceitaIA[]; aviso?: string }>(
     '/api/gemini-suggest-recipes',
-    { ingredientes },
+    {},
   )
-
-  return receitas
 }
