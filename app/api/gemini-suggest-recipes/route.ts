@@ -9,7 +9,7 @@ import {
   traduzirErroGemini,
 } from '@/lib/gemini'
 import { createClient } from '@/lib/supabase/server'
-import type { ReceitaIA } from '@/types/ia'
+import type { IngredienteIA, ReceitaIA } from '@/types/ia'
 
 export const runtime = 'nodejs'
 
@@ -19,6 +19,28 @@ export const maxDuration = 60
 /** Quantas receitas pedir por chamada. */
 const QUANTIDADE_RECEITAS = 6
 
+/** Alimento disponível, do jeito que entra no prompt. */
+type Disponivel = {
+  indice: number
+  id: string
+  nome: string
+  unidade: string
+  quantidade: number
+  urgente: boolean
+  validade: string
+}
+
+const SCHEMA_INGREDIENTE = {
+  type: Type.OBJECT,
+  properties: {
+    nome: { type: Type.STRING },
+    quantidade: { type: Type.NUMBER },
+    unidade: { type: Type.STRING },
+    indice_cadastro: { type: Type.INTEGER },
+  },
+  required: ['nome', 'quantidade', 'unidade', 'indice_cadastro'],
+}
+
 const SCHEMA = {
   type: Type.ARRAY,
   items: {
@@ -27,8 +49,8 @@ const SCHEMA = {
       nome_receita: { type: Type.STRING },
       tempo_preparo_minutos: { type: Type.INTEGER },
       porcoes: { type: Type.INTEGER },
-      ingredientes_disponiveis: { type: Type.ARRAY, items: { type: Type.STRING } },
-      ingredientes_faltando: { type: Type.ARRAY, items: { type: Type.STRING } },
+      ingredientes_disponiveis: { type: Type.ARRAY, items: SCHEMA_INGREDIENTE },
+      ingredientes_faltando: { type: Type.ARRAY, items: SCHEMA_INGREDIENTE },
       modo_preparo: { type: Type.ARRAY, items: { type: Type.STRING } },
     },
     required: [
@@ -42,44 +64,102 @@ const SCHEMA = {
   },
 }
 
-function montarPrompt(
-  ingredientes: { linha: string; urgente: boolean }[],
-): string {
-  const urgentes = ingredientes.filter((i) => i.urgente).map((i) => i.linha)
+function montarPrompt(disponiveis: Disponivel[]): string {
+  const lista = disponiveis
+    .map(
+      (i) =>
+        `[${i.indice}] ${i.nome} — tem ${i.quantidade} ${i.unidade}${i.validade}`,
+    )
+    .join('\n')
+
+  const urgentes = disponiveis.filter((i) => i.urgente)
 
   return `Você é um cozinheiro prático ajudando uma família a aproveitar o que já tem em casa.
 
-Ingredientes disponíveis na despensa:
-${ingredientes.map((i) => `- ${i.linha}`).join('\n')}
+Itens disponíveis na despensa, com o índice entre colchetes, o quanto há e a
+unidade em que cada um é medido:
+
+${lista}
 
 ${
   urgentes.length > 0
-    ? `PRIORIDADE: estes estão perto do vencimento e devem aparecer no maior número possível de receitas:\n${urgentes.map((linha) => `- ${linha}`).join('\n')}\n`
+    ? `PRIORIDADE: estes estão perto do vencimento e devem aparecer no maior número possível de receitas:
+${urgentes.map((i) => `- ${i.nome}`).join('\n')}
+`
     : ''
 }
 Sugira até ${QUANTIDADE_RECEITAS} receitas caseiras brasileiras, em português do Brasil, seguindo estas regras:
 
-1. Priorize receitas que usem SOMENTE os ingredientes listados. Pelo menos
-   metade das sugestões deve ser assim.
+1. Priorize receitas que usem SOMENTE os itens listados. Pelo menos metade das
+   sugestões deve ser assim.
 2. As demais podem faltar no máximo 2 ingredientes, e só ingredientes comuns e
    baratos de comprar.
 3. Considere que sal, açúcar, óleo, água, temperos secos e alho existem em
    qualquer cozinha: não os liste como faltando.
-4. "ingredientes_disponiveis" deve conter apenas nomes que aparecem na lista
-   acima, escritos do mesmo jeito.
-5. "ingredientes_faltando" deve conter só o que precisa ser comprado.
-6. "modo_preparo" é um passo por item do array, curto e direto.
-7. Nada de receitas que exijam equipamento incomum.`
+4. Nunca proponha usar mais de um item do que existe na despensa.
+
+Sobre as quantidades, que é a parte mais importante:
+
+- Em "ingredientes_disponiveis", coloque cada item da lista que a receita usa.
+  Preencha "indice_cadastro" com o número entre colchetes, e "quantidade" com
+  o quanto a receita consome **na mesma unidade indicada na lista acima**.
+  Exemplo: se a lista diz "Manteiga — tem 0.2 kg" e a receita leva 400 gramas,
+  responda quantidade 0.4 e unidade "kg". Não converta para gramas.
+- Em "ingredientes_faltando", coloque o que precisa ser comprado, com
+  "indice_cadastro" igual a -1 e a quantidade na unidade que fizer sentido
+  para comprar (kg, L, un).
+- "quantidade" é sempre um número. Nada de "a gosto" ou "o suficiente": se for
+  algo a gosto, use uma estimativa pequena e razoável.
+- "modo_preparo" é um passo por item do array, curto e direto, na ordem.
+- Nada de receitas que exijam equipamento incomum.`
 }
 
-/** Descarta receitas fora do contrato em vez de derrubar a resposta inteira. */
-function sanitizar(bruto: unknown): ReceitaIA[] {
+/** Descarta o que veio fora do contrato em vez de derrubar a resposta toda. */
+function sanitizarIngredientes(
+  bruto: unknown,
+  disponiveis: Disponivel[],
+  exigeVinculo: boolean,
+): IngredienteIA[] {
   if (!Array.isArray(bruto)) return []
 
-  const textos = (valor: unknown): string[] =>
-    Array.isArray(valor)
-      ? valor.map((v) => String(v).trim()).filter(Boolean)
-      : []
+  const resultado: IngredienteIA[] = []
+
+  for (const linha of bruto) {
+    if (typeof linha !== 'object' || linha === null) continue
+
+    const registro = linha as Record<string, unknown>
+    const nome = String(registro.nome ?? '').trim()
+    if (!nome) continue
+
+    // O índice é resolvido aqui, contra a lista real enviada no prompt: um
+    // número inventado vira ingrediente sem vínculo em vez de apontar para o
+    // item errado e dar baixa no que não foi usado.
+    const indice = Number(registro.indice_cadastro)
+    const item =
+      Number.isInteger(indice) && indice >= 0 && indice < disponiveis.length
+        ? disponiveis[indice]
+        : null
+
+    // Um "disponível" sem vínculo não tem como virar baixa no estoque.
+    if (exigeVinculo && !item) continue
+
+    const quantidade = Number(registro.quantidade)
+
+    resultado.push({
+      nome: item?.nome ?? nome,
+      quantidade: Number.isFinite(quantidade) && quantidade > 0 ? quantidade : 0,
+      // Para vinculados, a unidade do cadastro manda: é nela que a baixa
+      // acontece, independentemente do que a IA escreveu.
+      unidade: item?.unidade ?? String(registro.unidade ?? 'un').trim(),
+      stock_item_id: item?.id ?? null,
+    })
+  }
+
+  return resultado
+}
+
+function sanitizar(bruto: unknown, disponiveis: Disponivel[]): ReceitaIA[] {
+  if (!Array.isArray(bruto)) return []
 
   const receitas: ReceitaIA[] = []
 
@@ -88,7 +168,9 @@ function sanitizar(bruto: unknown): ReceitaIA[] {
 
     const registro = linha as Record<string, unknown>
     const nome = String(registro.nome_receita ?? '').trim()
-    const preparo = textos(registro.modo_preparo)
+    const preparo = Array.isArray(registro.modo_preparo)
+      ? registro.modo_preparo.map((v) => String(v).trim()).filter(Boolean)
+      : []
 
     // Sem nome ou sem preparo a receita é inútil na tela.
     if (!nome || preparo.length === 0) continue
@@ -97,8 +179,16 @@ function sanitizar(bruto: unknown): ReceitaIA[] {
       nome_receita: nome,
       tempo_preparo_minutos: Number(registro.tempo_preparo_minutos) || 0,
       porcoes: Number(registro.porcoes) || 0,
-      ingredientes_disponiveis: textos(registro.ingredientes_disponiveis),
-      ingredientes_faltando: textos(registro.ingredientes_faltando),
+      ingredientes_disponiveis: sanitizarIngredientes(
+        registro.ingredientes_disponiveis,
+        disponiveis,
+        true,
+      ),
+      ingredientes_faltando: sanitizarIngredientes(
+        registro.ingredientes_faltando,
+        disponiveis,
+        false,
+      ),
       modo_preparo: preparo,
     })
   }
@@ -121,7 +211,7 @@ export async function POST() {
   // cliente resolveu mandar.
   const { data: alimentos, error } = await supabase
     .from('stock_items')
-    .select('name, current_quantity, unit, expiration_date')
+    .select('id, name, current_quantity, unit, expiration_date')
     .eq('category', CATEGORIA_ALIMENTO)
     .gt('current_quantity', 0)
     .order('expiration_date', { nullsFirst: false })
@@ -142,9 +232,8 @@ export async function POST() {
     })
   }
 
-  const ingredientes = alimentos.map((item) => {
+  const disponiveis: Disponivel[] = alimentos.map((item, indice) => {
     const dias = item.expiration_date ? diasAte(item.expiration_date) : null
-    const urgente = dias !== null && dias <= 7
 
     const validade =
       dias === null
@@ -156,14 +245,19 @@ export async function POST() {
             : ` (vence em ${dias} dias)`
 
     return {
-      linha: `${item.name}: ${item.current_quantity} ${item.unit}${validade}`,
-      urgente,
+      indice,
+      id: item.id,
+      nome: item.name,
+      unidade: item.unit,
+      quantidade: item.current_quantity,
+      urgente: dias !== null && dias <= 7,
+      validade,
     }
   })
 
   try {
     const { response } = await gerarComResiliencia({
-      contents: montarPrompt(ingredientes),
+      contents: montarPrompt(disponiveis),
       config: {
         responseMimeType: 'application/json',
         responseSchema: SCHEMA,
@@ -171,7 +265,7 @@ export async function POST() {
       },
     })
 
-    const receitas = sanitizar(parseJsonDaIA<unknown>(response.text))
+    const receitas = sanitizar(parseJsonDaIA<unknown>(response.text), disponiveis)
 
     return NextResponse.json({ receitas })
   } catch (erro) {

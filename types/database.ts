@@ -279,6 +279,51 @@ export type Database = {
         ]
       }
 
+      recipe_sessions: {
+        Row: {
+          id: string
+          name: string
+          prep_minutes: number | null
+          servings: number | null
+          steps: Json
+          done_steps: number[]
+          ingredients: Json
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          name: string
+          prep_minutes?: number | null
+          servings?: number | null
+          steps?: Json
+          done_steps?: number[]
+          ingredients?: Json
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          name?: string
+          prep_minutes?: number | null
+          servings?: number | null
+          steps?: Json
+          done_steps?: number[]
+          ingredients?: Json
+          created_at?: string
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'recipe_sessions_created_by_fkey'
+            columns: ['created_by']
+            isOneToOne: false
+            referencedRelation: 'profiles'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+
       app_settings: {
         Row: {
           id: boolean
@@ -320,6 +365,10 @@ export type Database = {
       ensure_profile: {
         Args: Record<string, never>
         Returns: Database['public']['Tables']['profiles']['Row']
+      }
+      finish_recipe_session: {
+        Args: { p_session_id: string; p_consumos: Json }
+        Returns: number
       }
     }
 

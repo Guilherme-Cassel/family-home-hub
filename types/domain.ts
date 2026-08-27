@@ -8,6 +8,28 @@ export type MaintenanceItem = Tables<'maintenance_items'>
 export type MaintenanceLogEntry = Tables<'maintenance_log'>
 export type AppSettings = Tables<'app_settings'>
 
+/** Ingrediente como fica guardado numa receita em andamento. */
+export type IngredienteSalvo = {
+  stock_item_id: string | null
+  nome: string
+  quantidade: number
+  unidade: string
+}
+
+/**
+ * Receita em andamento, com os campos `jsonb` já em tipos utilizáveis.
+ *
+ * O banco devolve `steps` e `ingredients` como `Json`; a página converte uma
+ * vez, na leitura, para o resto do código não ficar checando formato.
+ */
+export type ReceitaEmAndamento = Omit<
+  Tables<'recipe_sessions'>,
+  'steps' | 'ingredients'
+> & {
+  steps: string[]
+  ingredients: IngredienteSalvo[]
+}
+
 /** Item de estoque com o nome de quem mexeu nele por último. */
 export type StockItemComAutor = StockItem & {
   updated_by_profile: Pick<Profile, 'display_name'> | null

@@ -33,12 +33,28 @@ export type IdentificacaoIA = {
   stock_item_id: string | null
 }
 
+/**
+ * Um ingrediente de receita, com quantidade.
+ *
+ * Para os que já estão na despensa, a quantidade vem **na mesma unidade em
+ * que o item está cadastrado** — a IA recebe a unidade junto com o nome e
+ * responde nela. Isso elimina a conversão de "400 g" para um estoque medido
+ * em kg, que seria fonte garantida de erro na hora de dar baixa.
+ */
+export type IngredienteIA = {
+  nome: string
+  quantidade: number
+  unidade: string
+  /** Item do cadastro correspondente, ou null quando é preciso comprar. */
+  stock_item_id: string | null
+}
+
 /** Uma receita sugerida a partir do estoque atual. */
 export type ReceitaIA = {
   nome_receita: string
   tempo_preparo_minutos: number
   porcoes: number
-  ingredientes_disponiveis: string[]
-  ingredientes_faltando: string[]
+  ingredientes_disponiveis: IngredienteIA[]
+  ingredientes_faltando: IngredienteIA[]
   modo_preparo: string[]
 }

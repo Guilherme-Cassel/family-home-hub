@@ -43,62 +43,102 @@ export async function adicionarAvulso(
   return {}
 }
 
+export type IngredienteFaltante = {
+  nome: string
+  quantidade: number
+  unidade: string
+}
+
 /**
  * Joga na lista de compras os ingredientes que faltam para uma receita.
  *
- * Ignora o que já está na lista em aberto, para não duplicar quando o usuário
- * pede duas receitas que precisam do mesmo item.
+ * Três situações, e cada uma pede um tratamento diferente:
+ *
+ * 1. O ingrediente já está na lista pedindo MENOS do que a receita precisa —
+ *    a quantidade sobe. Comprar 200 g de manteiga não adianta se a receita
+ *    leva 400 g.
+ * 2. Já está na lista com quantidade suficiente, ou já consta no estoque
+ *    abaixo do mínimo — não faz nada. Sem isso, o mesmo item aparecia duas
+ *    vezes, em seções diferentes.
+ * 3. Não está em lugar nenhum — entra como avulso, com quantidade e unidade.
  */
-export async function adicionarFaltantes(nomes: string[]): Promise<FormState> {
+export async function adicionarFaltantes(
+  ingredientes: IngredienteFaltante[],
+): Promise<FormState> {
   const { supabase } = await requireUser()
 
-  const limpos = [...new Set(nomes.map((nome) => nome.trim()).filter(Boolean))]
+  const limpos = ingredientes
+    .map((i) => ({ ...i, nome: i.nome?.trim() ?? '' }))
+    .filter((i) => i.nome)
+
   if (limpos.length === 0) return { error: 'Nenhum ingrediente para adicionar.' }
 
-  const { data: existentes, error: erroLeitura } = await supabase
-    .from('shopping_list_extras')
-    .select('name')
-    .eq('is_done', false)
+  const [{ data: existentes, error: erroLeitura }, { data: doEstoque }] =
+    await Promise.all([
+      supabase
+        .from('shopping_list_extras')
+        .select('id, name, quantity')
+        .eq('is_done', false),
+      supabase.from('stock_items').select('id, name').eq('is_below_minimum', true),
+    ])
 
   if (erroLeitura) {
     return { error: `Não foi possível ler a lista: ${erroLeitura.message}` }
   }
 
-  // A lista de compras tem duas origens, e o ingrediente pode já estar em
-  // qualquer uma delas. Conferir só os avulsos deixava o mesmo item aparecer
-  // duas vezes, em seções diferentes: o caso comum é um item de estoque
-  // zerado, que a IA nunca vê (ela só recebe quantidade acima de zero) e
-  // portanto reporta como faltando, mas que já está listado por estar abaixo
-  // do mínimo.
-  const { data: doEstoque } = await supabase
-    .from('stock_items')
-    .select('id, name')
-    .eq('is_below_minimum', true)
-
-  const jaNaLista = new Set(
-    (existentes ?? []).map((item) => normalizar(item.name)),
+  const porNome = new Map(
+    (existentes ?? []).map((item) => [normalizar(item.name), item]),
   )
 
-  const novos = limpos.filter((nome) => {
-    if (jaNaLista.has(normalizar(nome))) return false
+  const novos: IngredienteFaltante[] = []
+  const aumentar: { id: string; quantity: number }[] = []
+
+  for (const ingrediente of limpos) {
+    const jaAvulso = porNome.get(normalizar(ingrediente.nome))
+
+    if (jaAvulso) {
+      if (ingrediente.quantidade > (jaAvulso.quantity ?? 0)) {
+        aumentar.push({ id: jaAvulso.id, quantity: ingrediente.quantidade })
+      }
+      continue
+    }
 
     // Mesma tolerância do casamento por foto: "Manteiga" não deveria virar
     // avulso se o estoque já pede "Manteiga sem sal".
-    const correspondencia = melhorCorrespondencia(nome, doEstoque ?? [])
-    return (
-      correspondencia === null ||
-      correspondencia.pontuacao < LIMIAR_MATCH_AUTOMATICO
+    const correspondencia = melhorCorrespondencia(ingrediente.nome, doEstoque ?? [])
+    if (
+      correspondencia !== null &&
+      correspondencia.pontuacao >= LIMIAR_MATCH_AUTOMATICO
+    ) {
+      continue
+    }
+
+    novos.push(ingrediente)
+  }
+
+  if (novos.length > 0) {
+    const { error } = await supabase.from('shopping_list_extras').insert(
+      novos.map((i) => ({
+        name: i.nome,
+        quantity: i.quantidade > 0 ? i.quantidade : null,
+        unit: i.unidade || null,
+      })),
     )
-  })
 
-  if (novos.length === 0) return {}
+    if (error) {
+      return { error: `Não foi possível adicionar à lista: ${error.message}` }
+    }
+  }
 
-  const { error } = await supabase
-    .from('shopping_list_extras')
-    .insert(novos.map((name) => ({ name })))
+  for (const ajuste of aumentar) {
+    const { error } = await supabase
+      .from('shopping_list_extras')
+      .update({ quantity: ajuste.quantity })
+      .eq('id', ajuste.id)
 
-  if (error) {
-    return { error: `Não foi possível adicionar à lista: ${error.message}` }
+    if (error) {
+      return { error: `Não foi possível ajustar a quantidade: ${error.message}` }
+    }
   }
 
   revalidatePath('/compras')
