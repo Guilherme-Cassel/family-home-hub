@@ -68,17 +68,41 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
   // -------------------------------------------------------------------------
 
   async function aoEscolherArquivos(event: React.ChangeEvent<HTMLInputElement>) {
-    const arquivos = Array.from(event.target.files ?? [])
-    event.target.value = '' // permite escolher a mesma foto de novo
+    const entrada = event.target
+    const arquivos = Array.from(entrada.files ?? [])
     if (arquivos.length === 0) return
 
     setErro(null)
 
-    try {
-      const comprimidas = await Promise.all(arquivos.map(comprimirImagem))
-      setFotos((atuais) => [...atuais, ...comprimidas])
-    } catch (falha) {
-      setErro(falha instanceof Error ? falha.message : 'Não foi possível ler as fotos.')
+    // allSettled, não all: com `all`, uma única foto problemática descartava
+    // todas as outras do mesmo lote junto com ela.
+    const resultados = await Promise.allSettled(arquivos.map((a) => comprimirImagem(a)))
+
+    // Só limpa o input depois de ler os arquivos. Alguns navegadores de
+    // celular invalidam o File assim que o input é resetado, e limpar antes
+    // fazia a foto sumir sem erro nenhum.
+    entrada.value = ''
+
+    const prontas = resultados
+      .filter((r): r is PromiseFulfilledResult<FotoCapturada> => r.status === 'fulfilled')
+      .map((r) => r.value)
+
+    if (prontas.length > 0) {
+      setFotos((atuais) => [...atuais, ...prontas])
+    }
+
+    const falhas = resultados.filter((r) => r.status === 'rejected')
+    if (falhas.length > 0) {
+      const motivo =
+        falhas[0].status === 'rejected' && falhas[0].reason instanceof Error
+          ? falhas[0].reason.message
+          : 'motivo desconhecido'
+
+      setErro(
+        falhas.length === arquivos.length
+          ? `Não foi possível ler a foto: ${motivo}.`
+          : `${falhas.length} de ${arquivos.length} fotos não puderam ser lidas (${motivo}). As demais estão abaixo.`,
+      )
     }
   }
 

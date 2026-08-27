@@ -13,50 +13,119 @@ const LADO_MAXIMO = 1024
 const QUALIDADE_JPEG = 0.7
 
 /**
+ * Id local da foto.
+ *
+ * `crypto.randomUUID` só existe em contexto seguro. Abrir o app pelo IP da
+ * rede local (http://192.168.x.x:3000) para testar no celular não é contexto
+ * seguro, e ali a função é `undefined` — o que derrubava a captura inteira.
+ */
+function novoId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return `foto-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+/** Dimensões e algo que o canvas saiba desenhar. */
+type Decodificada = {
+  fonte: CanvasImageSource
+  largura: number
+  altura: number
+  liberar: () => void
+}
+
+/**
+ * Decodifica a foto para o canvas.
+ *
+ * O caminho preferido é `createImageBitmap`, que respeita a orientação EXIF —
+ * sem isso, foto tirada em pé chega deitada na IA. Mas ele falha em alguns
+ * navegadores e com formatos como HEIC do iPhone, então há um plano B com
+ * `<img>`, que os navegadores atuais também orientam pelo EXIF.
+ */
+async function decodificar(arquivo: File): Promise<Decodificada> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const bitmap = await createImageBitmap(arquivo, {
+        imageOrientation: 'from-image',
+      })
+      return {
+        fonte: bitmap,
+        largura: bitmap.width,
+        altura: bitmap.height,
+        liberar: () => bitmap.close(),
+      }
+    } catch {
+      // cai no plano B
+    }
+  }
+
+  const url = URL.createObjectURL(arquivo)
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const elemento = new window.Image()
+      elemento.onload = () => resolve(elemento)
+      elemento.onerror = () =>
+        reject(new Error('formato de imagem não suportado por este navegador'))
+      elemento.src = url
+    })
+
+    return {
+      fonte: img,
+      largura: img.naturalWidth,
+      altura: img.naturalHeight,
+      liberar: () => URL.revokeObjectURL(url),
+    }
+  } catch (erro) {
+    URL.revokeObjectURL(url)
+    throw erro
+  }
+}
+
+/**
  * Comprime a foto antes de enviar.
  *
- * Uma foto de celular moderno passa de 4 MB, e um lote de seis estouraria o
- * limite de corpo da requisição — além de gastar banda de dados no mercado, à
- * toa: para reconhecer uma embalagem, 1024px de lado é de sobra.
- *
- * `imageOrientation: 'from-image'` respeita o EXIF, senão fotos tiradas em pé
- * chegam deitadas na IA.
+ * Uma foto de celular moderno passa de 4 MB, e um lote estouraria o limite de
+ * corpo da requisição — além de gastar dados móveis à toa: para reconhecer uma
+ * embalagem, 1024px de lado é de sobra.
  */
 export async function comprimirImagem(arquivo: File): Promise<FotoCapturada> {
-  const bitmap = await createImageBitmap(arquivo, { imageOrientation: 'from-image' })
+  const { fonte, largura, altura, liberar } = await decodificar(arquivo)
 
-  const escala = Math.min(1, LADO_MAXIMO / Math.max(bitmap.width, bitmap.height))
-  const largura = Math.round(bitmap.width * escala)
-  const altura = Math.round(bitmap.height * escala)
+  try {
+    if (!largura || !altura) {
+      throw new Error('a imagem chegou com tamanho zero')
+    }
 
-  const canvas = document.createElement('canvas')
-  canvas.width = largura
-  canvas.height = altura
+    const escala = Math.min(1, LADO_MAXIMO / Math.max(largura, altura))
+    const canvas = document.createElement('canvas')
+    canvas.width = Math.max(1, Math.round(largura * escala))
+    canvas.height = Math.max(1, Math.round(altura * escala))
 
-  const contexto = canvas.getContext('2d')
-  if (!contexto) {
-    bitmap.close()
-    throw new Error('Não foi possível processar a imagem neste navegador.')
-  }
+    const contexto = canvas.getContext('2d')
+    if (!contexto) {
+      throw new Error('este navegador não deixou usar o canvas')
+    }
 
-  contexto.drawImage(bitmap, 0, 0, largura, altura)
-  bitmap.close()
+    contexto.drawImage(fonte, 0, 0, canvas.width, canvas.height)
 
-  const blob = await new Promise<Blob | null>((resolve) =>
-    canvas.toBlob(resolve, 'image/jpeg', QUALIDADE_JPEG),
-  )
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, 'image/jpeg', QUALIDADE_JPEG),
+    )
 
-  if (!blob) {
-    throw new Error('Não foi possível comprimir a imagem.')
-  }
+    if (!blob) {
+      throw new Error('a compressão não produziu imagem')
+    }
 
-  return {
-    id: crypto.randomUUID(),
-    preview: URL.createObjectURL(blob),
-    enviavel: {
-      mimeType: 'image/jpeg',
-      data: await blobParaBase64(blob),
-    },
+    return {
+      id: novoId(),
+      preview: URL.createObjectURL(blob),
+      enviavel: {
+        mimeType: 'image/jpeg',
+        data: await blobParaBase64(blob),
+      },
+    }
+  } finally {
+    liberar()
   }
 }
 
@@ -64,7 +133,7 @@ export async function comprimirImagem(arquivo: File): Promise<FotoCapturada> {
 function blobParaBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const leitor = new FileReader()
-    leitor.onerror = () => reject(new Error('Falha ao ler a imagem.'))
+    leitor.onerror = () => reject(new Error('falha ao ler a imagem'))
     leitor.onload = () => {
       const resultado = String(leitor.result)
       resolve(resultado.slice(resultado.indexOf(',') + 1))
