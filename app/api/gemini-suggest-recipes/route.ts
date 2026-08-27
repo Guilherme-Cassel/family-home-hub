@@ -4,8 +4,7 @@ import { CATEGORIA_ALIMENTO } from '@/lib/constants'
 import { diasAte } from '@/lib/datas'
 import {
   GeminiError,
-  getGeminiClient,
-  getModelo,
+  gerarComResiliencia,
   parseJsonDaIA,
   traduzirErroGemini,
 } from '@/lib/gemini'
@@ -13,6 +12,9 @@ import { createClient } from '@/lib/supabase/server'
 import type { ReceitaIA } from '@/types/ia'
 
 export const runtime = 'nodejs'
+
+// Mesmo motivo da rota de fotos: o modelo pode demorar dezenas de segundos.
+export const maxDuration = 60
 
 /** Quantas receitas pedir por chamada. */
 const QUANTIDADE_RECEITAS = 6
@@ -160,10 +162,7 @@ export async function POST() {
   })
 
   try {
-    const ai = getGeminiClient()
-
-    const response = await ai.models.generateContent({
-      model: getModelo(),
+    const { response } = await gerarComResiliencia({
       contents: montarPrompt(ingredientes),
       config: {
         responseMimeType: 'application/json',

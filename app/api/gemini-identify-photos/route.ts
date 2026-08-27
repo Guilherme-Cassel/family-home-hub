@@ -2,8 +2,7 @@ import { Type } from '@google/genai'
 import { NextResponse } from 'next/server'
 import {
   GeminiError,
-  getGeminiClient,
-  getModelo,
+  gerarComResiliencia,
   parseJsonDaIA,
   traduzirErroGemini,
 } from '@/lib/gemini'
@@ -11,6 +10,11 @@ import { createClient } from '@/lib/supabase/server'
 import type { FotoEnviada, IdentificacaoIA } from '@/types/ia'
 
 export const runtime = 'nodejs'
+
+// A chamada com 6 fotos leva de 5s a 35s conforme o modelo e a fila do
+// Google. O padrao da Vercel e curto demais para isso, e a funcao morreria no
+// meio devolvendo algo que nem e JSON.
+export const maxDuration = 60
 
 /** Teto de segurança por requisição, independente do lote pedido pelo cliente. */
 const MAX_FOTOS_POR_REQUISICAO = 16
@@ -109,13 +113,10 @@ export async function POST(request: Request) {
   }
 
   try {
-    const ai = getGeminiClient()
-
-    // Todas as imagens do lote vão numa chamada só. Com a cota diária gratuita
-    // em poucas dezenas de requisições, uma foto por requisição inviabilizaria
+    // Todas as imagens do lote vao numa chamada so. Com a cota diaria gratuita
+    // em poucas dezenas de requisicoes, uma foto por requisicao inviabilizaria
     // uma ida ao mercado inteira.
-    const response = await ai.models.generateContent({
-      model: getModelo(),
+    const { response } = await gerarComResiliencia({
       contents: [
         {
           role: 'user',

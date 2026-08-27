@@ -65,7 +65,7 @@ Preencha:
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase → Project Settings → API |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | idem (projetos antigos chamam de *anon key*; nesse caso use `NEXT_PUBLIC_SUPABASE_ANON_KEY`) |
 | `GEMINI_API_KEY` | Google AI Studio |
-| `GEMINI_MODEL` | opcional, padrão `gemini-3.5-flash` |
+| `GEMINI_MODEL` | opcional, padrão `gemini-3.5-flash-lite` |
 | `GEMINI_BATCH_SIZE` | opcional, padrão `6` |
 
 `GEMINI_API_KEY` **não** tem prefixo `NEXT_PUBLIC_` de propósito: ela só existe no servidor. O arquivo `lib/gemini.ts` é marcado com `server-only`, então o build quebra se algum componente de cliente tentar importá-lo.
@@ -113,16 +113,36 @@ Projetos no plano gratuito do Supabase são **pausados automaticamente após 7 d
 
 Para uma família que usa o app toda semana, isso raramente acontece. Se acontecer com frequência, uma evolução futura seria um **ping semanal via GitHub Actions** — um workflow agendado que faz uma requisição simples ao projeto e reinicia a contagem de inatividade. Não está implementado aqui de propósito, para não adicionar infraestrutura antes de o problema aparecer.
 
-### A cota gratuita do Gemini é pequena
+### A escolha do modelo do Gemini
 
-O free tier do Gemini existe e cobre os modelos Flash com visão e JSON estruturado. Mas em dezembro de 2025 o Google **reduziu a cota diária do Flash de cerca de 250 para cerca de 20 requisições por dia** e parou de publicar a tabela de limites — hoje cada conta consulta a sua em [aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit). A cota reseta à meia-noite no horário do Pacífico.
+O padrão é `gemini-3.5-flash-lite`, e isso saiu de medição, não de preferência. Testando o mesmo payload que o app manda de verdade — 6 imagens de 1024x768:
 
-Foi isso que definiu o desenho do fluxo de foto:
+| Modelo | Resultado | Tempo |
+| --- | --- | --- |
+| `gemini-3.5-flash-lite` | ok | **5s** |
+| `gemini-3.6-flash` | ok | 9s |
+| `gemini-3.5-flash` | ok | 34s (chegou a 112s numa chamada) |
+| `gemini-3.7-flash` | 503 | — |
+
+O lite ganha em três eixos ao mesmo tempo: é o mais rápido, foi o que teve mais cota (500 requisições/dia contra poucas dezenas dos modelos maiores) e para reconhecer embalagem de supermercado a qualidade empata com os irmãos maiores.
+
+A latência não é detalhe cosmético: função serverless tem prazo, e o `gemini-3.5-flash` demorando 34s estourava o limite da Vercel antes de responder. Por isso as duas rotas de IA declaram `maxDuration = 60`.
+
+**Os modelos "Live" não servem aqui**, mesmo anunciando requisições ilimitadas: eles só expõem `bidiGenerateContent`, uma API de streaming por WebSocket para conversa em tempo real. Não aceitam `generateContent`, que é o "manda N fotos, devolve JSON" que este app faz.
+
+### Quando a IA fica indisponível
+
+O `503 UNAVAILABLE` do Gemini é falta de capacidade **por modelo, do lado do Google** — não tem relação com a sua cota nem com o horário. Na medição acima, o `gemini-3.7-flash` estava fora no mesmo minuto em que o lite e o 3.6 respondiam normalmente.
+
+Por isso a resiliência é **trocar de modelo**, não repetir no mesmo: `GEMINI_MODEL_FALLBACK` define a fila de modelos tentados em sequência quando o principal responde 503. Erros de cota, de chave ou de payload sobem na hora, sem tentar os outros — não melhorariam com outro modelo e só gastariam o prazo da função.
+
+### A cota gratuita é finita
+
+Cada conta vê a sua em [aistudio.google.com/rate-limit](https://aistudio.google.com/rate-limit); o Google parou de publicar a tabela geral. A cota reseta à meia-noite no horário do Pacífico. Com o flash-lite em 500 requisições/dia e lotes de 6 fotos, dá 3.000 fotos por dia — folgado para uso familiar. O desenho ainda economiza:
 
 - **As fotos vão em lote**, `GEMINI_BATCH_SIZE` por requisição (padrão 6). Uma compra de 12 fotos custa 2 requisições, não 12.
 - **Chamadas só sob demanda.** Nada de identificação em segundo plano ou receitas carregadas junto com a tela — só quando você toca no botão.
 - **Estourar a cota é caminho previsto, não erro genérico.** A tela explica o que houve em português e oferece o atalho para digitar os itens manualmente, sem perder o que já foi identificado.
-- Se apertar, dá para trocar `GEMINI_MODEL` para `gemini-3.5-flash-lite`, ou ativar billing na conta Google — no volume de uma família, o custo real fica na casa de centavos por mês.
 
 Uma observação de privacidade: no free tier, o Google diz que **usa o conteúdo enviado para melhorar os produtos deles**. Para foto de embalagem de arroz isso é irrelevante, mas fica registrado.
 

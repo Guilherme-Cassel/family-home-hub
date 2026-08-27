@@ -12,13 +12,46 @@ import { RespostaInvalidaError, parseJsonDaIA } from './jsonIA'
  * vazaria a chave da API para o navegador.
  */
 
-const MODELO_PADRAO = 'gemini-3.5-flash'
+/**
+ * Modelo padrão: o Flash-Lite.
+ *
+ * Medido com 6 fotos de 1024x768, o mesmo payload que o app manda de verdade:
+ * flash-lite respondeu em 5s, o flash em 34s (e chegou a 112s numa chamada).
+ * Para reconhecer embalagem de supermercado a diferença de qualidade não
+ * aparece, mas a de latência decide se a função da Vercel termina ou morre no
+ * meio.
+ */
+const MODELO_PADRAO = 'gemini-3.5-flash-lite'
+
+/**
+ * Modelos tentados em sequência quando o principal responde 503.
+ *
+ * O 503 do Gemini é falta de capacidade por modelo, do lado do Google, e
+ * atinge um tier enquanto os outros seguem normais — foi exatamente o que a
+ * medição pegou: o 3.7 fora do ar no mesmo minuto em que o 3.6 e o lite
+ * respondiam. Cair para outro modelo resolve o que nenhuma quantidade de
+ * retry no mesmo modelo resolveria.
+ */
+const FALLBACKS_PADRAO = ['gemini-3.6-flash', 'gemini-3.5-flash']
 
 /** Quantas fotos vão em uma única requisição. Ver README sobre a cota. */
 export const TAMANHO_LOTE_PADRAO = 6
 
 export function getModelo() {
   return process.env.GEMINI_MODEL?.trim() || MODELO_PADRAO
+}
+
+/** Cadeia completa de tentativas, sem repetir o principal. */
+export function getModelos(): string[] {
+  const principal = getModelo()
+
+  const configurados = process.env.GEMINI_MODEL_FALLBACK?.split(',')
+    .map((m) => m.trim())
+    .filter(Boolean)
+
+  const fallbacks = configurados?.length ? configurados : FALLBACKS_PADRAO
+
+  return [principal, ...fallbacks.filter((m) => m !== principal)]
 }
 
 export function getTamanhoLote() {
@@ -102,6 +135,61 @@ export function traduzirErroGemini(erro: unknown): GeminiError {
   }
 
   return new GeminiError(`A IA não respondeu como esperado: ${mensagem}`, 502)
+}
+
+function ehIndisponibilidade(erro: unknown): boolean {
+  const texto = (erro instanceof Error ? erro.message : String(erro)).toLowerCase()
+  return (
+    texto.includes('503') ||
+    texto.includes('unavailable') ||
+    texto.includes('overloaded') ||
+    texto.includes('500') ||
+    texto.includes('internal')
+  )
+}
+
+type ParametrosGeracao = Omit<
+  Parameters<ReturnType<typeof getGeminiClient>['models']['generateContent']>[0],
+  'model'
+>
+
+/**
+ * Gera conteúdo tentando cada modelo da cadeia até um responder.
+ *
+ * Só troca de modelo em falha de disponibilidade (503/500). Erro de cota, de
+ * chave ou de payload não melhora com outro modelo, então esses sobem na hora
+ * — insistir só gastaria o tempo da função e, no caso da cota, requisições
+ * que o usuário não tem.
+ *
+ * O orçamento de tempo existe porque a função da Vercel tem prazo: melhor
+ * devolver um erro honesto do que ser morta no meio e o cliente receber uma
+ * resposta que nem é JSON.
+ */
+export async function gerarComResiliencia(
+  parametros: ParametrosGeracao,
+  orcamentoMs = 45_000,
+) {
+  const ai = getGeminiClient()
+  const modelos = getModelos()
+  const limite = Date.now() + orcamentoMs
+
+  for (const [indice, model] of modelos.entries()) {
+    if (indice > 0 && Date.now() > limite) break
+
+    try {
+      const response = await ai.models.generateContent({ ...parametros, model })
+      return { response, modelo: model }
+    } catch (erro) {
+      if (!ehIndisponibilidade(erro)) throw traduzirErroGemini(erro)
+    }
+  }
+
+  throw new GeminiError(
+    'Todos os modelos de IA disponíveis estão sobrecarregados agora ' +
+      `(tentei ${modelos.join(', ')}). Isso costuma passar em alguns minutos. ` +
+      'Suas fotos continuam aqui, ou dá para registrar digitando.',
+    503,
+  )
 }
 
 /** Reexportado para as rotas importarem tudo de um lugar só. */
