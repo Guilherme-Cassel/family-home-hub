@@ -36,5 +36,5 @@
 }
 
 @utility safe-bottom {
-  padding-bottom: max(env(safe-area-inset-bottom), 0.5rem);
+  padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
 }
