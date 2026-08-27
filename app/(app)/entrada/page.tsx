@@ -17,20 +17,23 @@ export default function EntradaPage() {
 
       <ul className="space-y-3">
         <li>
-          <Card className="flex items-center gap-4 p-4 opacity-60">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
-              <IconCamera width={24} height={24} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2">
-                <p className="font-medium text-slate-900">Por foto</p>
-                <Badge>Em breve</Badge>
+          <Link href="/entrada/foto">
+            <Card className="flex items-center gap-4 p-4 transition-colors hover:bg-slate-50">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-700">
+                <IconCamera width={24} height={24} />
               </div>
-              <p className="mt-0.5 text-sm text-slate-500">
-                Fotografar os produtos e deixar a IA identificar.
-              </p>
-            </div>
-          </Card>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="font-medium text-slate-900">Por foto</p>
+                  <Badge tone="info">IA</Badge>
+                </div>
+                <p className="mt-0.5 text-sm text-slate-500">
+                  Fotografar os produtos e deixar a IA identificar.
+                </p>
+              </div>
+              <IconChevronRight className="shrink-0 text-slate-400" />
+            </Card>
+          </Link>
         </li>
 
         <li>
