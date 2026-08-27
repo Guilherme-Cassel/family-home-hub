@@ -1,4 +1,4 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import Link from 'next/link'
 import type { ComponentProps } from 'react'
 
@@ -21,7 +21,7 @@ const SIZES: Record<Size, string> = {
 
 /** Classes comuns a botões e links com aparência de botão. */
 export function buttonClasses(variant: Variant = 'primary', size: Size = 'md') {
-  return clsx(
+  return cn(
     'inline-flex items-center justify-center gap-2 rounded-xl font-medium',
     'transition-colors select-none',
     'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
@@ -43,7 +43,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   return (
-    <button {...props} className={clsx(buttonClasses(variant, size), className)} />
+    <button {...props} className={cn(buttonClasses(variant, size), className)} />
   )
 }
 
@@ -59,6 +59,6 @@ export function ButtonLink({
   ...props
 }: ButtonLinkProps) {
   return (
-    <Link {...props} className={clsx(buttonClasses(variant, size), className)} />
+    <Link {...props} className={cn(buttonClasses(variant, size), className)} />
   )
 }

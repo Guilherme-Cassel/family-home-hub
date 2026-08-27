@@ -1,6 +1,6 @@
 'use client'
 
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import Link from 'next/link'
 import { useState, useTransition } from 'react'
 import {
@@ -79,7 +79,7 @@ export function ManutencaoClient({ itens }: { itens: MaintenanceItem[] }) {
 
             return (
               <li key={item.id}>
-                <Card className={clsx('p-0', FAIXA[status])}>
+                <Card className={cn('p-0', FAIXA[status])}>
                   <div className="flex items-center gap-3 p-3">
                     <Link
                       href={`/manutencao/${item.id}`}

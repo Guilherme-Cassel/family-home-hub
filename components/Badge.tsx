@@ -1,4 +1,4 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import type { ComponentProps } from 'react'
 
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info'
@@ -17,7 +17,7 @@ export function Badge({ tone = 'neutral', className, ...props }: Props) {
   return (
     <span
       {...props}
-      className={clsx(
+      className={cn(
         'inline-flex items-center gap-1 rounded-full px-2 py-0.5',
         'text-xs font-medium ring-1 ring-inset whitespace-nowrap',
         TONES[tone],

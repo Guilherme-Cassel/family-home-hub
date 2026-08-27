@@ -1,4 +1,4 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
@@ -26,13 +26,13 @@ export function StatCard({ href, rotulo, valor, detalhe, tom = 'neutro' }: Props
   return (
     <Link
       href={href}
-      className={clsx(
+      className={cn(
         'block rounded-2xl bg-white p-4 shadow-sm ring-1 transition-colors',
         'hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
         estilo.caixa,
       )}
     >
-      <p className={clsx('text-3xl font-semibold tabular-nums', estilo.valor)}>
+      <p className={cn('text-3xl font-semibold tabular-nums', estilo.valor)}>
         {valor}
       </p>
       <p className="mt-0.5 text-sm font-medium text-slate-700">{rotulo}</p>

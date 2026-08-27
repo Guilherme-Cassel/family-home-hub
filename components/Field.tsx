@@ -1,7 +1,7 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import type { ComponentProps, ReactNode } from 'react'
 
-export const inputClasses = clsx(
+export const inputClasses = cn(
   'w-full rounded-xl bg-white px-3 py-2.5 text-base text-slate-900',
   'ring-1 ring-slate-300 placeholder:text-slate-400',
   'focus:ring-2 focus:ring-brand-600 focus:outline-none',
@@ -9,15 +9,15 @@ export const inputClasses = clsx(
 )
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
-  return <input {...props} className={clsx(inputClasses, className)} />
+  return <input {...props} className={cn(inputClasses, className)} />
 }
 
 export function Select({ className, ...props }: ComponentProps<'select'>) {
-  return <select {...props} className={clsx(inputClasses, 'h-11', className)} />
+  return <select {...props} className={cn(inputClasses, 'h-11', className)} />
 }
 
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
-  return <textarea {...props} className={clsx(inputClasses, className)} />
+  return <textarea {...props} className={cn(inputClasses, className)} />
 }
 
 type FieldProps = {

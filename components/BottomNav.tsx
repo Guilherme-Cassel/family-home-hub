@@ -1,6 +1,6 @@
 'use client'
 
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
@@ -37,12 +37,12 @@ export function BottomNav() {
               <Link
                 href={href}
                 aria-current={ativo ? 'page' : undefined}
-                className={clsx(
+                className={cn(
                   'flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-colors',
                   ativo ? 'text-brand-700' : 'text-slate-500 hover:text-slate-700',
                 )}
               >
-                <Icon className={clsx(ativo && 'stroke-[2.1]')} />
+                <Icon className={cn(ativo && 'stroke-[2.1]')} />
                 {label}
               </Link>
             </li>

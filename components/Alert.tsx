@@ -1,4 +1,4 @@
-import clsx from 'clsx'
+import { cn } from '@/lib/cn'
 import type { ReactNode } from 'react'
 
 type Props = {
@@ -18,7 +18,7 @@ export function Alert({ tone = 'error', children }: Props) {
   return (
     <div
       role={tone === 'error' ? 'alert' : 'status'}
-      className={clsx('rounded-xl px-3 py-2.5 text-sm ring-1 ring-inset', TONES[tone])}
+      className={cn('rounded-xl px-3 py-2.5 text-sm ring-1 ring-inset', TONES[tone])}
     >
       {children}
     </div>

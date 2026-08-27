@@ -7,6 +7,7 @@ import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { Input, Select, inputClasses } from '@/components/Field'
+import { cn } from '@/lib/cn'
 import { IconPlus, IconTrash } from '@/components/icons'
 import { salvarEntradas } from '@/lib/actions/entradas'
 import { CATEGORIAS_ESTOQUE, UNIDADES } from '@/lib/constants'
@@ -182,7 +183,7 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
                     onKeyDown={(e) => aoTeclar(e, indice)}
                     placeholder={`Item ${indice + 1}`}
                     aria-label={`Nome do item da linha ${indice + 1}`}
-                    className={`${inputClasses} flex-1`}
+                    className={cn(inputClasses, 'flex-1')}
                     autoComplete="off"
                   />
 
