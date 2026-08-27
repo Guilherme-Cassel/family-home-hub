@@ -76,6 +76,16 @@ export function traduzirErroGemini(erro: unknown): GeminiError {
     )
   }
 
+  // Sobrecarga do modelo, não erro de configuração: acontece de verdade e
+  // costuma passar sozinho em pouco tempo.
+  if (texto.includes('503') || texto.includes('unavailable') || texto.includes('overloaded')) {
+    return new GeminiError(
+      'A IA está sobrecarregada agora. Isso costuma durar pouco — espere alguns ' +
+        'segundos e toque de novo. Suas fotos continuam aqui.',
+      503,
+    )
+  }
+
   if (texto.includes('api key') || texto.includes('401') || texto.includes('403')) {
     return new GeminiError(
       'A chave do Gemini foi recusada. Confira o valor de GEMINI_API_KEY.',
