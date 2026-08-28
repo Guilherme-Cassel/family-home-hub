@@ -13,6 +13,7 @@ import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Button, ButtonLink } from '@/components/Button'
 import { Card } from '@/components/Card'
+import { PageHeader } from '@/components/PageHeader'
 import { EmptyState } from '@/components/EmptyState'
 import { Input } from '@/components/Field'
 import { SubmitButton } from '@/components/SubmitButton'
@@ -96,24 +97,25 @@ export function ComprasClient({ faltando, avulsos }: Props) {
   }
 
   return (
-    <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Lista de compras</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {totalPendente === 0
+    <>
+      <PageHeader
+        titulo="Lista de compras"
+        subtitulo={
+          totalPendente === 0
             ? 'Nada pendente por enquanto.'
-            : `${totalPendente} ${totalPendente === 1 ? 'item pendente' : 'itens pendentes'}.`}
-        </p>
-      </div>
+            : `${totalPendente} ${totalPendente === 1 ? 'item pendente' : 'itens pendentes'}.`
+        }
+      />
 
+      <div className="space-y-7">
       {totalPendente > 0 ? (
-        <Card className="space-y-3">
+        <Card className="space-y-3 p-[18px]">
           <div className="flex items-end justify-between gap-3">
             <div>
-              <p className="text-xs font-medium tracking-wide text-slate-500 uppercase">
+              <p className="text-[13px] font-semibold text-ink-2">
                 Estimativa da compra
               </p>
-              <p className="text-2xl font-semibold tabular-nums text-slate-900">
+              <p className="text-2xl font-semibold tabular-nums text-ink">
                 {estimativa.comPreco > 0 ? formatarMoeda(estimativa.total) : '—'}
               </p>
             </div>
@@ -135,7 +137,7 @@ export function ComprasClient({ faltando, avulsos }: Props) {
 
           {/* O que a estimativa não cobre precisa ficar visível: um total que
               ignora metade da lista em silêncio engana mais do que ajuda. */}
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-ink-2">
             {estimativa.comPreco === 0
               ? 'Nenhum item tem preço de referência ainda. O preço é aprendido quando você registra uma compra com valor.'
               : estimativa.semPreco > 0
@@ -145,7 +147,7 @@ export function ComprasClient({ faltando, avulsos }: Props) {
 
           {textoParaSelecionar ? (
             <div className="space-y-1">
-              <p className="text-xs text-amber-700">
+              <p className="text-xs text-warn-ink">
                 Este navegador não deixou copiar sozinho. Selecione o texto abaixo:
               </p>
               <textarea
@@ -153,7 +155,7 @@ export function ComprasClient({ faltando, avulsos }: Props) {
                 value={textoParaSelecionar}
                 rows={Math.min(12, linhas.length + 5)}
                 onFocus={(e) => e.currentTarget.select()}
-                className="w-full rounded-xl bg-slate-50 p-2 font-mono text-xs text-slate-700 ring-1 ring-slate-300"
+                className="w-full rounded-item bg-surface-2 p-2 font-mono text-xs text-ink ring-1 ring-line"
               />
             </div>
           ) : null}
@@ -166,24 +168,24 @@ export function ComprasClient({ faltando, avulsos }: Props) {
       {/* Itens do estoque que furaram o mínimo                               */}
       {/* ------------------------------------------------------------------ */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+        <h2 className="px-1.5 text-[13px] font-semibold text-accent">
           Acabando no estoque
         </h2>
 
         {faltando.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-2">
             Nenhum item abaixo da quantidade mínima.
           </p>
         ) : (
           <ul className="space-y-2">
             {faltando.map((item) => (
               <li key={item.id}>
-                <Card className="flex items-center justify-between gap-3 p-3">
+                <Card className="flex items-center justify-between gap-3 rounded-item px-4 py-3.5">
                   <Link href={`/estoque/${item.id}`} className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-slate-900">{item.name}</p>
+                    <p className="truncate font-medium text-ink">{item.name}</p>
                     <div className="mt-1 flex flex-wrap items-center gap-1.5">
                       <Badge>{rotuloCategoriaEstoque(item.category)}</Badge>
-                      <span className="text-xs text-slate-500">
+                      <span className="text-xs text-ink-2">
                         Tem {formatarQuantidade(item.current_quantity)} {item.unit} ·
                         mínimo {formatarQuantidade(item.minimum_quantity)} {item.unit}
                         {item.last_price
@@ -208,7 +210,7 @@ export function ComprasClient({ faltando, avulsos }: Props) {
       {/* Compras pontuais                                                    */}
       {/* ------------------------------------------------------------------ */}
       <section className="space-y-2">
-        <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+        <h2 className="px-1.5 text-[13px] font-semibold text-accent">
           Itens avulsos
         </h2>
 
@@ -236,14 +238,14 @@ export function ComprasClient({ faltando, avulsos }: Props) {
         {estadoForm.error ? <Alert>{estadoForm.error}</Alert> : null}
 
         {avulsos.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-2">
             Nada avulso na lista. Use o campo acima para uma compra pontual.
           </p>
         ) : (
           <ul className="space-y-2">
             {avulsos.map((item) => (
               <li key={item.id}>
-                <Card className="flex items-center gap-3 p-3">
+                <Card className="flex items-center gap-3 rounded-item px-4 py-3.5">
                   <input
                     type="checkbox"
                     checked={item.is_done}
@@ -252,21 +254,21 @@ export function ComprasClient({ faltando, avulsos }: Props) {
                       executar(() => alternarAvulso(item.id, e.target.checked))
                     }
                     aria-label={`Marcar ${item.name} como comprado`}
-                    className="h-5 w-5 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-600"
+                    className="h-5 w-5 shrink-0 rounded border-line text-accent focus:ring-accent"
                   />
 
                   <div className="min-w-0 flex-1">
                     <p
                       className={
                         item.is_done
-                          ? 'truncate text-slate-400 line-through'
-                          : 'truncate font-medium text-slate-900'
+                          ? 'truncate text-ink-3 line-through'
+                          : 'truncate font-medium text-ink'
                       }
                     >
                       {item.name}
                     </p>
                     {item.quantity ? (
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-ink-2">
                         {formatarQuantidade(item.quantity)} {item.unit ?? 'un'}
                       </p>
                     ) : null}
@@ -277,7 +279,7 @@ export function ComprasClient({ faltando, avulsos }: Props) {
                     onClick={() => executar(() => removerAvulso(item.id))}
                     disabled={pendente}
                     aria-label={`Remover ${item.name} da lista`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                    className="press-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-danger-soft hover:text-danger disabled:opacity-40"
                   >
                     <IconTrash />
                   </button>
@@ -307,8 +309,8 @@ export function ComprasClient({ faltando, avulsos }: Props) {
           description="Quando algum item do estoque ficar abaixo do mínimo, ele aparece aqui automaticamente."
         />
       ) : (
-        <section className="border-t border-slate-200 pt-5">
-          <p className="mb-2 text-sm text-slate-600">
+        <section>
+          <p className="mb-3 px-1.5 text-sm text-ink-2">
             Voltou do mercado? Registre o que comprou de uma vez só.
           </p>
           <ButtonLink href="/entrada" size="lg" className="w-full">
@@ -317,6 +319,7 @@ export function ComprasClient({ faltando, avulsos }: Props) {
           </ButtonLink>
         </section>
       )}
-    </div>
+      </div>
+    </>
   )
 }

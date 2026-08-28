@@ -51,23 +51,23 @@ export function QuantityStepper({ itemId, quantidade, unidade, onErro }: Props) 
         onClick={() => ajustar(-1)}
         disabled={!podeConsumir}
         aria-label="Consumir uma unidade"
-        className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 ring-1 ring-slate-300 transition-colors hover:bg-slate-50 active:bg-slate-100 disabled:opacity-40"
+        className="press-sm flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent-ink transition hover:brightness-95 disabled:opacity-40"
       >
         <IconMinus />
       </button>
 
       <div className="min-w-16 text-center">
-        <span className="text-base font-semibold tabular-nums text-slate-900">
+        <span className="text-base font-semibold tabular-nums text-ink">
           {formatarQuantidade(otimista)}
         </span>
-        <span className="ml-1 text-xs text-slate-500">{unidade}</span>
+        <span className="ml-1 text-xs text-ink-2">{unidade}</span>
       </div>
 
       <button
         type="button"
         onClick={() => ajustar(1)}
         aria-label="Repor uma unidade"
-        className="flex h-11 w-11 items-center justify-center rounded-xl text-slate-600 ring-1 ring-slate-300 transition-colors hover:bg-slate-50 active:bg-slate-100 disabled:opacity-40"
+        className="press-sm flex h-11 w-11 items-center justify-center rounded-full bg-accent-soft text-accent-ink transition hover:brightness-95 disabled:opacity-40"
       >
         <IconPlus />
       </button>

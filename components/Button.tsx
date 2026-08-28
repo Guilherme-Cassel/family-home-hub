@@ -2,30 +2,34 @@ import { cn } from '@/lib/cn'
 import Link from 'next/link'
 import type { ComponentProps } from 'react'
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'danger'
+type Variant = 'primary' | 'secondary' | 'neutral' | 'ghost' | 'danger'
 type Size = 'md' | 'lg' | 'icon'
 
+/**
+ * Botões da One UI são pílulas. O "secondary" é tonal (fundo suave do acento),
+ * não contornado — é assim que o Galaxy trata a ação secundária. O "neutral"
+ * existe para ações que não são do acento nem destrutivas, tipo "Voltar".
+ */
 const VARIANTS: Record<Variant, string> = {
-  primary: 'bg-brand-600 text-white hover:bg-brand-700 active:bg-brand-700',
-  secondary:
-    'bg-white text-slate-800 ring-1 ring-slate-300 hover:bg-slate-50 active:bg-slate-100',
-  ghost: 'text-slate-700 hover:bg-slate-100 active:bg-slate-200',
-  danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-700',
+  primary: 'bg-accent text-on-fill hover:brightness-110',
+  secondary: 'bg-accent-soft text-accent-ink hover:brightness-[0.97]',
+  neutral: 'bg-surface-2 text-ink hover:brightness-[0.97]',
+  ghost: 'text-ink-2 hover:bg-surface-2',
+  danger: 'bg-danger text-on-fill hover:brightness-110',
 }
 
 const SIZES: Record<Size, string> = {
-  md: 'h-11 px-4 text-sm',
-  lg: 'h-13 px-5 text-base',
-  icon: 'h-11 w-11',
+  md: 'h-12 px-5 text-[15px]',
+  lg: 'h-14 px-6 text-base',
+  icon: 'h-12 w-12',
 }
 
 /** Classes comuns a botões e links com aparência de botão. */
 export function buttonClasses(variant: Variant = 'primary', size: Size = 'md') {
   return cn(
-    'inline-flex items-center justify-center gap-2 rounded-xl font-medium',
-    'transition-colors select-none',
-    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
-    'disabled:cursor-not-allowed disabled:opacity-50',
+    'press inline-flex items-center justify-center gap-2 rounded-full font-semibold',
+    'tracking-[-0.01em] select-none',
+    'disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100',
     VARIANTS[variant],
     SIZES[size],
   )
@@ -60,5 +64,39 @@ export function ButtonLink({
 }: ButtonLinkProps) {
   return (
     <Link {...props} className={cn(buttonClasses(variant, size), className)} />
+  )
+}
+
+/**
+ * Botão redondo e discreto da barra superior. Alvo de 44px, glifo em cinza —
+ * o padrão da One UI para ações do cabeçalho.
+ */
+export function IconButton({ className, ...props }: ComponentProps<'button'>) {
+  return (
+    <button
+      {...props}
+      className={cn(
+        'press-sm grid h-11 w-11 shrink-0 place-items-center rounded-full',
+        'text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink',
+        'disabled:opacity-40',
+        className,
+      )}
+    />
+  )
+}
+
+export function IconButtonLink({
+  className,
+  ...props
+}: ComponentProps<typeof Link>) {
+  return (
+    <Link
+      {...props}
+      className={cn(
+        'press-sm grid h-11 w-11 shrink-0 place-items-center rounded-full',
+        'text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink',
+        className,
+      )}
+    />
   )
 }

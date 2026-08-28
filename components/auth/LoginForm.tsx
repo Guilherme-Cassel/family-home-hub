@@ -45,7 +45,7 @@ export function LoginForm({ redirecionar }: { redirecionar: string }) {
 
       {/* Sem link de cadastro: as contas da casa são criadas à mão no painel
           do Supabase, e não pela internet aberta. */}
-      <p className="text-center text-xs text-slate-500">
+      <p className="text-center text-xs text-ink-2">
         O acesso é criado por quem administra o app.
       </p>
     </form>

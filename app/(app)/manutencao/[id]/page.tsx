@@ -3,6 +3,7 @@ import { excluirManutencao } from '../actions'
 import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Card } from '@/components/Card'
+import { PageHeader } from '@/components/PageHeader'
 import { ConfirmSubmit } from '@/components/ConfirmSubmit'
 import { MaintenanceItemForm } from '@/components/manutencao/MaintenanceItemForm'
 import { formatarData } from '@/lib/formatters'
@@ -35,12 +36,14 @@ export default async function ManutencaoItemPage({
   const selo = rotuloStatusManutencao(item)
 
   return (
-    <div className="space-y-6">
+    <>
+      <PageHeader titulo={item.name} voltar="/manutencao" />
+
+      <div className="space-y-7">
       <div>
-        <h1 className="text-xl font-semibold text-slate-900">{item.name}</h1>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
           <Badge tone={selo.tom}>{selo.texto}</Badge>
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-ink-2">
             Próxima em {formatarData(item.next_due_date)}
           </span>
         </div>
@@ -49,12 +52,12 @@ export default async function ManutencaoItemPage({
       <MaintenanceItemForm item={item} />
 
       <section className="space-y-3">
-        <h2 className="text-base font-semibold text-slate-900">Histórico</h2>
+        <h2 className="text-[17px] font-bold tracking-[-0.01em] text-ink">Histórico</h2>
 
         {erroHistorico ? (
           <Alert>Não foi possível carregar o histórico: {erroHistorico.message}</Alert>
         ) : !historico || historico.length === 0 ? (
-          <p className="text-sm text-slate-500">
+          <p className="text-sm text-ink-2">
             Nenhuma manutenção registrada ainda. Use o botão de check na listagem
             para marcar a primeira.
           </p>
@@ -62,17 +65,17 @@ export default async function ManutencaoItemPage({
           <ul className="space-y-2">
             {historico.map((registro) => (
               <li key={registro.id}>
-                <Card className="p-3">
-                  <p className="font-medium text-slate-900">
+                <Card className="rounded-item px-4 py-3.5">
+                  <p className="font-medium text-ink">
                     {formatarData(registro.done_date)}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="mt-0.5 text-xs text-ink-2">
                     {registro.autor
                       ? `Feito por ${registro.autor.display_name}`
                       : 'Autor não registrado'}
                   </p>
                   {registro.notes ? (
-                    <p className="mt-2 text-sm text-slate-600">{registro.notes}</p>
+                    <p className="mt-2 text-sm text-ink-2">{registro.notes}</p>
                   ) : null}
                 </Card>
               </li>
@@ -81,9 +84,9 @@ export default async function ManutencaoItemPage({
         )}
       </section>
 
-      <section className="space-y-2 border-t border-slate-200 pt-6">
-        <h2 className="text-base font-semibold text-slate-900">Excluir item</h2>
-        <p className="text-sm text-slate-500">
+      <section className="space-y-3">
+        <h2 className="text-[17px] font-bold tracking-[-0.01em] text-ink">Excluir item</h2>
+        <p className="text-sm text-ink-2">
           Apaga o item e todo o histórico de manutenções dele. Não dá para
           desfazer.
         </p>
@@ -97,6 +100,7 @@ export default async function ManutencaoItemPage({
           </ConfirmSubmit>
         </form>
       </section>
-    </div>
+      </div>
+    </>
   )
 }

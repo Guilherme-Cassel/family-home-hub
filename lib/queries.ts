@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { DIAS_AVISO_VALIDADE_PADRAO } from './constants'
 import { createClient } from './supabase/server'
 
@@ -12,7 +13,7 @@ import { createClient } from './supabase/server'
  * Chamar isto no layout da área logada garante que o perfil exista antes de
  * qualquer tela oferecer um botão que escreve no banco.
  */
-export async function getNomeDoUsuario(
+export const getNomeDoUsuario = cache(async function getNomeDoUsuario(
   userId: string,
   fallback: string,
 ): Promise<string> {
@@ -31,7 +32,7 @@ export async function getNomeDoUsuario(
 
   const { data: criado } = await supabase.rpc('ensure_profile')
   return criado?.display_name ?? fallback
-}
+})
 
 /**
  * Janela de "perto da validade", compartilhada pela casa.
@@ -39,7 +40,7 @@ export async function getNomeDoUsuario(
  * Se a linha de configuração ainda não existir (banco recém-criado), cai no
  * padrão em vez de quebrar a tela.
  */
-export async function getDiasAvisoValidade(): Promise<number> {
+export const getDiasAvisoValidade = cache(async function getDiasAvisoValidade(): Promise<number> {
   const supabase = await createClient()
 
   const { data } = await supabase
@@ -48,4 +49,4 @@ export async function getDiasAvisoValidade(): Promise<number> {
     .maybeSingle()
 
   return data?.expiry_warning_days ?? DIAS_AVISO_VALIDADE_PADRAO
-}
+})

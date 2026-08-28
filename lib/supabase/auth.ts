@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { createClient } from './server'
 
@@ -8,7 +9,7 @@ import { createClient } from './server'
  * POST para a própria rota e podem escapar do matcher — por isso toda action
  * que escreve no banco chama esta função antes de qualquer coisa.
  */
-export async function requireUser() {
+export const requireUser = cache(async function requireUser() {
   const supabase = await createClient()
   const {
     data: { user },
@@ -19,4 +20,4 @@ export async function requireUser() {
   }
 
   return { supabase, user }
-}
+})

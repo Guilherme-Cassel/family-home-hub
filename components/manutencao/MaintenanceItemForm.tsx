@@ -71,8 +71,8 @@ export function MaintenanceItemForm({ item }: { item?: MaintenanceItem }) {
                 aria-pressed={frequencia === String(f.dias)}
                 className={
                   frequencia === String(f.dias)
-                    ? 'rounded-full bg-brand-100 px-2 py-1 text-xs font-medium text-brand-700'
-                    : 'rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-200'
+                    ? 'rounded-full bg-accent-soft px-2 py-1 text-xs font-medium text-accent'
+                    : 'rounded-full bg-surface-2 px-2 py-1 text-xs font-medium text-ink-2 hover:brightness-95'
                 }
               >
                 {f.rotulo}

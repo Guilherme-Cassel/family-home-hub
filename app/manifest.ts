@@ -14,8 +14,8 @@ export default function manifest(): MetadataRoute.Manifest {
       'Estoque da despensa e manutenções da casa, para a família toda.',
     start_url: '/',
     display: 'standalone',
-    background_color: '#f8fafc',
-    theme_color: '#0c6f4d',
+    background_color: '#f4f5f7',
+    theme_color: '#0b7d59',
     lang: 'pt-BR',
     icons: [
       { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml' },

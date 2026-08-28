@@ -50,10 +50,20 @@ export const IconCart = (p: IconProps) => (
   </Icon>
 )
 
+/**
+ * Chave de boca. Desenhada na vertical e girada 45° — de pé fica muito mais
+ * fácil acertar a proporção entre a boca e o cabo do que tentando traçar tudo
+ * já na diagonal.
+ */
 export const IconWrench = (p: IconProps) => (
   <Icon {...p}>
-    <path d="M14.7 6.3a4 4 0 0 0 5.1 5.1l-8 8a2.8 2.8 0 0 1-4-4l8-8Z" />
-    <path d="m14.7 6.3 3-3" />
+    <g transform="rotate(-45 12 12)">
+      {/* Silhueta inteira num traço só: lateral da cabeça, ombro que afina
+          para o cabo, ponta arredondada, volta pelo outro lado e o entalhe
+          semicircular entre os dois dentes. A cabeça precisa ser bem mais
+          larga que o cabo — é isso que faz ler como chave, e não como garfo. */}
+      <path d="M8.4 3.6V8.6C8.4 10 10.85 10 10.85 11.2V18.3a1.15 1.15 0 0 0 2.3 0V11.2C13.15 10 15.6 10 15.6 8.6V3.6H13.6V6.4a1.6 1.6 0 0 1-3.2 0V3.6Z" />
+    </g>
   </Icon>
 )
 
@@ -131,5 +141,24 @@ export const IconCopy = (p: IconProps) => (
 export const IconList = (p: IconProps) => (
   <Icon {...p}>
     <path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" />
+  </Icon>
+)
+
+export const IconArrowLeft = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M19 12H5M11 6l-6 6 6 6" />
+  </Icon>
+)
+
+export const IconAlert = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="M12 8.5v5M12 17h.01" />
+    <circle cx="12" cy="12" r="9" />
+  </Icon>
+)
+
+export const IconChevronDown = (p: IconProps) => (
+  <Icon {...p}>
+    <path d="m5 9 7 7 7-7" />
   </Icon>
 )

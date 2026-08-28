@@ -6,6 +6,7 @@ import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
+import { PageHeader } from '@/components/PageHeader'
 import { Input, Select, inputClasses } from '@/components/Field'
 import { cn } from '@/lib/cn'
 import { IconPlus, IconTrash } from '@/components/icons'
@@ -148,14 +149,14 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
   const novos = preenchidas.filter((linha) => !itemPorNome(linha.nome)).length
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Digitar itens</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Comece a digitar e o app sugere o que já está cadastrado. Enter pula
-          para a próxima linha.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        titulo="Digitar itens"
+        subtitulo="Comece a digitar e o app sugere o que já está cadastrado. Enter pula para a próxima linha."
+        voltar="/entrada"
+      />
+
+      <div className="space-y-4">
 
       {/* Lista compartilhada por todas as linhas: o navegador cuida da sugestão. */}
       <datalist id={listaId}>
@@ -173,7 +174,7 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
 
           return (
             <li key={linha.chave}>
-              <Card className="space-y-2 p-3">
+              <Card className="space-y-2 rounded-item px-4 py-3.5">
                 <div className="flex items-center gap-2">
                   <input
                     id={`nome-${linha.chave}`}
@@ -205,7 +206,7 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
                     type="button"
                     onClick={() => removerLinha(linha.chave)}
                     aria-label={`Remover linha ${indice + 1}`}
-                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600"
+                    className="press-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-danger-soft hover:text-danger"
                   >
                     <IconTrash />
                   </button>
@@ -214,7 +215,7 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
                 {conhecido ? (
                   <div className="flex items-center gap-2">
                     <Badge tone="success">Já cadastrado</Badge>
-                    <span className="text-xs text-slate-500">
+                    <span className="text-xs text-ink-2">
                       Tem {conhecido.name} · unidade {conhecido.unit}
                     </span>
                   </div>
@@ -263,8 +264,8 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
         Adicionar linha
       </Button>
 
-      <div className="safe-bottom sticky bottom-nav z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-        <p className="mb-2 text-xs text-slate-500">
+      <div className="safe-bottom sticky bottom-nav z-20 -mx-4 border-t border-line glass px-4 py-3 backdrop-blur">
+        <p className="mb-2 text-xs text-ink-2">
           {preenchidas.length === 0
             ? 'Nenhuma linha preenchida.'
             : `${preenchidas.length} ${preenchidas.length === 1 ? 'linha' : 'linhas'}` +
@@ -279,6 +280,7 @@ export function EntradaRapidaClient({ itens }: { itens: ItemConhecido[] }) {
           {pendente ? 'Salvando…' : 'Salvar tudo'}
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

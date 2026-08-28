@@ -1,14 +1,15 @@
 import { cn } from '@/lib/cn'
 import Link from 'next/link'
+import { Squircle } from '@/components/Card'
 import type { ReactNode } from 'react'
 
 type Tom = 'neutro' | 'alerta' | 'critico' | 'ok'
 
-const TONS: Record<Tom, { valor: string; caixa: string }> = {
-  neutro: { valor: 'text-slate-900', caixa: 'ring-slate-200' },
-  ok: { valor: 'text-emerald-700', caixa: 'ring-emerald-200 bg-emerald-50/50' },
-  alerta: { valor: 'text-amber-700', caixa: 'ring-amber-200 bg-amber-50/50' },
-  critico: { valor: 'text-red-700', caixa: 'ring-red-200 bg-red-50/50' },
+const TONS: Record<Tom, { valor: string; fundo: string; tinta: string }> = {
+  neutro: { valor: 'text-ink', fundo: 'bg-surface-2', tinta: 'text-ink-2' },
+  ok: { valor: 'text-ok', fundo: 'bg-ok-soft', tinta: 'text-ok' },
+  alerta: { valor: 'text-warn', fundo: 'bg-warn-soft', tinta: 'text-warn' },
+  critico: { valor: 'text-danger', fundo: 'bg-danger-soft', tinta: 'text-danger' },
 }
 
 type Props = {
@@ -17,26 +18,44 @@ type Props = {
   valor: number
   detalhe?: ReactNode
   tom?: Tom
+  icone?: ReactNode
 }
 
 /** Número grande e clicável do resumo da casa. */
-export function StatCard({ href, rotulo, valor, detalhe, tom = 'neutro' }: Props) {
+export function StatCard({
+  href,
+  rotulo,
+  valor,
+  detalhe,
+  tom = 'neutro',
+  icone,
+}: Props) {
   const estilo = TONS[tom]
 
   return (
-    <Link
-      href={href}
-      className={cn(
-        'block rounded-2xl bg-white p-4 shadow-sm ring-1 transition-colors',
-        'hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
-        estilo.caixa,
-      )}
-    >
-      <p className={cn('text-3xl font-semibold tabular-nums', estilo.valor)}>
-        {valor}
-      </p>
-      <p className="mt-0.5 text-sm font-medium text-slate-700">{rotulo}</p>
-      {detalhe ? <p className="mt-1 text-xs text-slate-500">{detalhe}</p> : null}
+    <Link href={href} className="press block rounded-card bg-surface p-[18px]">
+      <span className="flex items-center justify-between gap-2">
+        <span
+          className={cn(
+            'block text-[40px] leading-none font-bold tracking-[-0.04em] tabular-nums',
+            estilo.valor,
+          )}
+        >
+          {valor}
+        </span>
+        {icone ? (
+          <Squircle cor={estilo.fundo} tinta={estilo.tinta} tamanho="sm">
+            {icone}
+          </Squircle>
+        ) : null}
+      </span>
+
+      <span className="mt-2.5 block text-[14.5px] font-semibold tracking-[-0.01em] text-ink">
+        {rotulo}
+      </span>
+      {detalhe ? (
+        <span className="mt-0.5 block text-[12.5px] text-ink-2">{detalhe}</span>
+      ) : null}
     </Link>
   )
 }

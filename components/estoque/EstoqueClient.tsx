@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
-import { ButtonLink } from '@/components/Button'
-import { Card } from '@/components/Card'
+import { ButtonLink, IconButtonLink } from '@/components/Button'
+import { CardGroup } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
 import { Input, Select } from '@/components/Field'
+import { PageHeader } from '@/components/PageHeader'
 import { IconChevronRight, IconPlus, IconSearch } from '@/components/icons'
 import { QuantityStepper } from './QuantityStepper'
 import { CATEGORIAS_ESTOQUE, rotuloCategoriaEstoque } from '@/lib/constants'
@@ -44,21 +45,24 @@ export function EstoqueClient({ itens, diasAvisoValidade }: Props) {
   }, [itens])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-slate-900">Estoque</h1>
-        <ButtonLink href="/estoque/novo" size="md">
-          <IconPlus width={18} height={18} />
-          Novo item
-        </ButtonLink>
-      </div>
+    <>
+      <PageHeader
+        titulo="Estoque"
+        subtitulo={`${itens.length} ${itens.length === 1 ? 'item cadastrado' : 'itens cadastrados'}`}
+        acao={
+          <IconButtonLink href="/estoque/novo" aria-label="Cadastrar novo item">
+            <IconPlus />
+          </IconButtonLink>
+        }
+      />
 
-      <div className="space-y-2">
+      <div className="space-y-4">
+        <div className="space-y-2">
         <div className="relative">
           <IconSearch
             width={18}
             height={18}
-            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-ink-3"
           />
           <Input
             value={busca}
@@ -100,34 +104,37 @@ export function EstoqueClient({ itens, diasAvisoValidade }: Props) {
           description="Tente outro termo de busca ou troque a categoria."
         />
       ) : (
-        <ul className="space-y-2">
-          {filtrados.map((item) => {
-            const status = statusDoItem(item, diasAvisoValidade)
-            const selo = rotuloStatusEstoque(item, status)
+        <CardGroup>
+          <ul>
+            {filtrados.map((item) => {
+              const status = statusDoItem(item, diasAvisoValidade)
+              const selo = rotuloStatusEstoque(item, status)
 
-            return (
-              <li key={item.id}>
-                <Card className="flex items-center gap-3 p-3">
+              return (
+                <li
+                  key={item.id}
+                  className="flex items-center gap-3 border-b border-line px-4 py-3 last:border-0"
+                >
                   <Link
                     href={`/estoque/${item.id}`}
-                    className="min-w-0 flex-1 rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+                    className="min-w-0 flex-1 rounded-item"
                   >
                     <div className="flex items-center gap-1.5">
-                      <span className="truncate font-medium text-slate-900">
+                      <span className="truncate font-semibold tracking-[-0.01em] text-ink">
                         {item.name}
                       </span>
                       <IconChevronRight
                         width={16}
                         height={16}
-                        className="shrink-0 text-slate-400"
+                        className="shrink-0 text-ink-3"
                       />
                     </div>
 
-                    <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                       <Badge>{rotuloCategoriaEstoque(item.category)}</Badge>
                       {selo ? <Badge tone={selo.tom}>{selo.texto}</Badge> : null}
                       {item.expiration_date && status === 'ok' ? (
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-ink-2">
                           Val. {formatarData(item.expiration_date)}
                         </span>
                       ) : null}
@@ -140,12 +147,13 @@ export function EstoqueClient({ itens, diasAvisoValidade }: Props) {
                     unidade={item.unit}
                     onErro={setErro}
                   />
-                </Card>
-              </li>
-            )
-          })}
-        </ul>
-      )}
-    </div>
+                </li>
+              )
+            })}
+          </ul>
+        </CardGroup>
+        )}
+      </div>
+    </>
   )
 }

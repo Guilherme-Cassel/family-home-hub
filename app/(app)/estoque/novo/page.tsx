@@ -1,12 +1,13 @@
 import { StockItemForm } from '@/components/estoque/StockItemForm'
+import { PageHeader } from '@/components/PageHeader'
 
 export const metadata = { title: 'Novo item · Casa em Ordem' }
 
 export default function NovoItemPage() {
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold text-slate-900">Novo item</h1>
+    <>
+      <PageHeader titulo="Novo item" voltar="/estoque" />
       <StockItemForm />
-    </div>
+    </>
   )
 }

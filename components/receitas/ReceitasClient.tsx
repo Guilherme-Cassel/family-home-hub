@@ -8,6 +8,7 @@ import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
+import { PageHeader } from '@/components/PageHeader'
 import { EmptyState } from '@/components/EmptyState'
 import { IconCheck, IconChef, IconChevronRight, IconPlus } from '@/components/icons'
 import { formatarQuantidade } from '@/lib/formatters'
@@ -94,16 +95,15 @@ export function ReceitasClient({ totalAlimentos, emAndamento }: Props) {
   )
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">O que posso cozinhar?</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          A partir dos {totalAlimentos}{' '}
-          {totalAlimentos === 1 ? 'alimento cadastrado' : 'alimentos cadastrados'},
-          priorizando o que está perto de vencer.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        titulo="O que posso cozinhar?"
+        subtitulo={`A partir dos ${totalAlimentos} ${
+          totalAlimentos === 1 ? 'alimento cadastrado' : 'alimentos cadastrados'
+        }, priorizando o que está perto de vencer.`}
+      />
 
+      <div className="space-y-5">
       {erro ? <Alert>{erro}</Alert> : null}
       {aviso ? <Alert tone="info">{aviso}</Alert> : null}
 
@@ -112,19 +112,19 @@ export function ReceitasClient({ totalAlimentos, emAndamento }: Props) {
       {/* ------------------------------------------------------------------ */}
       {emAndamento.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+          <h2 className="px-1.5 text-[13px] font-semibold text-accent">
             Na cozinha agora
           </h2>
           {emAndamento.map((sessao) => (
             <Link key={sessao.id} href={`/receitas/${sessao.id}`}>
-              <Card className="flex items-center gap-3 border-l-4 border-l-brand-500 p-3 transition-colors hover:bg-slate-50">
+              <Card className="press flex items-center gap-3 rounded-item px-4 py-3.5 transition-colors hover:bg-surface-2">
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-slate-900">{sessao.name}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
+                  <p className="truncate font-medium text-ink">{sessao.name}</p>
+                  <p className="mt-0.5 text-xs text-ink-2">
                     {sessao.done_steps.length} de {sessao.total_steps} passos
                   </p>
                 </div>
-                <IconChevronRight className="shrink-0 text-slate-400" />
+                <IconChevronRight className="shrink-0 text-ink-3" />
               </Card>
             </Link>
           ))}
@@ -161,7 +161,7 @@ export function ReceitasClient({ totalAlimentos, emAndamento }: Props) {
 
       {completas.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+          <h2 className="px-1.5 text-[13px] font-semibold text-accent">
             Dá para fazer agora
           </h2>
           {completas.map((receita) => (
@@ -177,7 +177,7 @@ export function ReceitasClient({ totalAlimentos, emAndamento }: Props) {
 
       {quaseLa.length > 0 ? (
         <section className="space-y-2">
-          <h2 className="text-sm font-semibold tracking-wide text-slate-500 uppercase">
+          <h2 className="px-1.5 text-[13px] font-semibold text-accent">
             Faltando pouco
           </h2>
           {quaseLa.map((receita) => (
@@ -194,13 +194,14 @@ export function ReceitasClient({ totalAlimentos, emAndamento }: Props) {
       ) : null}
 
       {receitas.length > 0 ? (
-        <p className="border-t border-slate-200 pt-4 text-xs text-slate-500">
+        <p className="px-1.5 text-xs text-ink-2">
           Sugestões e quantidades geradas por IA. Podem conter imprecisões — não é
           fonte validada de culinária. Confira antes de seguir, principalmente em
           receitas com carne, ovo ou conservas.
         </p>
       ) : null}
-    </div>
+      </div>
+    </>
   )
 }
 
@@ -222,7 +223,7 @@ function ReceitaCard({
   return (
     <Card className="space-y-3 p-4">
       <div>
-        <h3 className="font-semibold text-slate-900">{receita.nome_receita}</h3>
+        <h3 className="font-semibold text-ink">{receita.nome_receita}</h3>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {receita.tempo_preparo_minutos > 0 ? (
             <Badge>{receita.tempo_preparo_minutos} min</Badge>
@@ -245,13 +246,13 @@ function ReceitaCard({
 
       {receita.ingredientes_faltando.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-ink-2">
             Falta comprar:{' '}
             {receita.ingredientes_faltando.map(descreverIngrediente).join(', ')}.
           </p>
 
           {jaAdicionada ? (
-            <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-700">
+            <p className="flex items-center gap-1.5 text-sm font-medium text-ok-ink">
               <IconCheck width={16} height={16} />
               Na lista de compras.{' '}
               <Link href="/compras" className="underline">
@@ -271,19 +272,19 @@ function ReceitaCard({
         type="button"
         onClick={() => setAberta((v) => !v)}
         aria-expanded={aberta}
-        className="text-sm font-medium text-brand-700 underline"
+        className="text-sm font-medium text-accent underline"
       >
         {aberta ? 'Esconder o preparo' : 'Ver o preparo'}
       </button>
 
       {aberta ? (
-        <div className="space-y-3 border-t border-slate-200 pt-3">
+        <div className="space-y-3 border-t border-line pt-3">
           {receita.ingredientes_disponiveis.length > 0 ? (
             <div>
-              <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+              <p className="text-[13px] font-semibold text-ink-2">
                 Usa do seu estoque
               </p>
-              <ul className="mt-1 space-y-0.5 text-sm text-slate-600">
+              <ul className="mt-1 space-y-0.5 text-sm text-ink-2">
                 {receita.ingredientes_disponiveis.map((i, indice) => (
                   <li key={`${i.nome}-${indice}`}>{descreverIngrediente(i)}</li>
                 ))}
@@ -292,10 +293,10 @@ function ReceitaCard({
           ) : null}
 
           <div>
-            <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
+            <p className="text-[13px] font-semibold text-ink-2">
               Modo de preparo
             </p>
-            <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-sm text-slate-700">
+            <ol className="mt-1 list-decimal space-y-1.5 pl-5 text-sm text-ink">
               {receita.modo_preparo.map((passo, indice) => (
                 <li key={indice}>{passo}</li>
               ))}

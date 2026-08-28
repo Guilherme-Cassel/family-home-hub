@@ -1,19 +1,41 @@
 import { cn } from '@/lib/cn'
+import { IconChevronDown } from '@/components/icons'
 import type { ComponentProps, ReactNode } from 'react'
 
+/**
+ * Campos da One UI são caixas cheias de canto largo. O anel fica de fora do
+ * estado normal e só aparece no foco, na cor de acento.
+ */
 export const inputClasses = cn(
-  'w-full rounded-xl bg-white px-3 py-2.5 text-base text-slate-900',
-  'ring-1 ring-slate-300 placeholder:text-slate-400',
-  'focus:ring-2 focus:ring-brand-600 focus:outline-none',
-  'disabled:bg-slate-100 disabled:text-slate-500',
+  'w-full rounded-field bg-surface px-4 py-3 text-base text-ink',
+  'ring-1 ring-line placeholder:text-ink-2',
+  'transition-shadow focus:ring-2 focus:ring-accent focus:outline-none',
+  'disabled:bg-surface-2 disabled:text-ink-2',
 )
 
 export function Input({ className, ...props }: ComponentProps<'input'>) {
   return <input {...props} className={cn(inputClasses, className)} />
 }
 
+/**
+ * A seta nativa do `<select>` fica colada na borda do campo e ignora o tema —
+ * some no escuro e destoa do resto. Aqui ela é desligada e redesenhada com o
+ * mesmo chevron do app, na cor certa e afastada da borda.
+ */
 export function Select({ className, ...props }: ComponentProps<'select'>) {
-  return <select {...props} className={cn(inputClasses, 'h-11', className)} />
+  return (
+    <span className="relative block">
+      <select
+        {...props}
+        className={cn(inputClasses, 'h-12 appearance-none pr-11', className)}
+      />
+      <IconChevronDown
+        width={18}
+        height={18}
+        className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-ink-2"
+      />
+    </span>
+  )
 }
 
 export function Textarea({ className, ...props }: ComponentProps<'textarea'>) {
@@ -29,12 +51,15 @@ type FieldProps = {
 
 export function Field({ label, htmlFor, hint, children }: FieldProps) {
   return (
-    <div className="space-y-1.5">
-      <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700">
+    <div className="space-y-2">
+      <label
+        htmlFor={htmlFor}
+        className="block px-1.5 text-[13px] font-semibold text-ink-2"
+      >
         {label}
       </label>
       {children}
-      {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+      {hint ? <p className="px-1.5 text-xs text-ink-2">{hint}</p> : null}
     </div>
   )
 }

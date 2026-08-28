@@ -8,6 +8,7 @@ import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
+import { PageHeader } from '@/components/PageHeader'
 import { EmptyState } from '@/components/EmptyState'
 import { Input, Select, inputClasses } from '@/components/Field'
 import { IconCamera, IconPlus, IconTrash } from '@/components/icons'
@@ -308,16 +309,16 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
     return (
       <div className="space-y-4 py-12 text-center">
         <div
-          className="mx-auto h-10 w-10 animate-spin rounded-full border-3 border-slate-200 border-t-brand-600"
+          className="mx-auto h-10 w-10 animate-spin rounded-full border-3 border-line border-t-accent"
           role="status"
           aria-label="Processando"
         />
-        <p className="font-medium text-slate-900">
+        <p className="font-medium text-ink">
           {progresso.de === progresso.ate
             ? `Processando foto ${progresso.de} de ${progresso.total}…`
             : `Processando fotos ${progresso.de} a ${progresso.ate} de ${progresso.total}…`}
         </p>
-        <p className="text-sm text-slate-500">
+        <p className="text-sm text-ink-2">
           As fotos vão em lotes de {tamanhoLote} para gastar menos da cota diária
           da IA.
         </p>
@@ -327,13 +328,13 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
 
   if (etapa === 'revisao') {
     return (
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-xl font-semibold text-slate-900">Revisar antes de salvar</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Nada foi gravado ainda. Confira os vínculos e as quantidades.
-          </p>
-        </div>
+      <>
+        <PageHeader
+          titulo="Revisar antes de salvar"
+          subtitulo="Nada foi gravado ainda. Confira os vínculos e as quantidades."
+        />
+
+        <div className="space-y-4">
 
         {erro ? <Alert>{erro}</Alert> : null}
 
@@ -354,7 +355,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
 
               return (
                 <li key={linha.fotoId}>
-                  <Card className="space-y-3 p-3">
+                  <Card className="space-y-3 rounded-item px-4 py-3.5">
                     <div className="flex gap-3">
                       <Image
                         src={linha.preview}
@@ -362,7 +363,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                         width={64}
                         height={64}
                         unoptimized
-                        className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-slate-200"
+                        className="h-16 w-16 shrink-0 rounded-item object-cover ring-1 ring-line"
                       />
 
                       <div className="min-w-0 flex-1 space-y-2">
@@ -405,7 +406,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                         type="button"
                         onClick={() => removerLinha(linha.fotoId)}
                         aria-label="Descartar esta foto"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        className="press-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-danger-soft hover:text-danger"
                       >
                         <IconTrash />
                       </button>
@@ -481,8 +482,8 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
         )}
 
         {linhas.length > 0 ? (
-          <div className="safe-bottom sticky bottom-nav z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-            <p className="mb-2 text-xs text-slate-500">
+          <div className="glass sticky bottom-nav z-20 -mx-5 rounded-card px-5 py-3">
+            <p className="mb-2 text-xs text-ink-2">
               {linhas.length} {linhas.length === 1 ? 'item' : 'itens'}
               {pendentes > 0 ? ` · ${pendentes} sem vínculo` : ''}
             </p>
@@ -491,19 +492,21 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
             </Button>
           </div>
         ) : null}
-      </div>
+        </div>
+      </>
     )
   }
 
   // Etapa 1 — captura
   return (
-    <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold text-slate-900">Fotografar as compras</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Tire uma foto por produto. Nada é enviado até você tocar em processar.
-        </p>
-      </div>
+    <>
+      <PageHeader
+        titulo="Fotografar as compras"
+        subtitulo="Tire uma foto por produto. Nada é enviado até você tocar em processar."
+        voltar="/entrada"
+      />
+
+      <div className="space-y-4">
 
       {erro ? (
         <Alert>
@@ -520,7 +523,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
       ) : null}
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 font-medium text-white active:bg-brand-700">
+        <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-item bg-accent px-4 font-semibold text-on-fill">
           <IconCamera width={20} height={20} />
           Tirar foto
           <input
@@ -533,7 +536,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
           />
         </label>
 
-        <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-xl bg-white px-4 font-medium text-slate-800 ring-1 ring-slate-300 active:bg-slate-100">
+        <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-item bg-surface px-4 font-medium text-ink ring-1 ring-line active:bg-surface-2">
           <IconPlus width={20} height={20} />
           Da galeria
           <input
@@ -562,13 +565,13 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                   width={160}
                   height={160}
                   unoptimized
-                  className="aspect-square w-full rounded-xl object-cover ring-1 ring-slate-200"
+                  className="aspect-square w-full rounded-item object-cover ring-1 ring-line"
                 />
                 <button
                   type="button"
                   onClick={() => removerFoto(foto.id)}
                   aria-label={`Remover foto ${indice + 1}`}
-                  className="absolute top-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-slate-900/70 text-white backdrop-blur"
+                  className="absolute top-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white backdrop-blur"
                 >
                   <IconTrash width={16} height={16} />
                 </button>
@@ -576,8 +579,8 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
             ))}
           </ul>
 
-          <div className="safe-bottom sticky bottom-nav z-20 -mx-4 border-t border-slate-200 bg-white/95 px-4 py-3 backdrop-blur">
-            <p className="mb-2 text-xs text-slate-500">
+          <div className="glass sticky bottom-nav z-20 -mx-5 rounded-card px-5 py-3">
+            <p className="mb-2 text-xs text-ink-2">
               {fotos.length} {fotos.length === 1 ? 'foto' : 'fotos'} ·{' '}
               {Math.ceil(fotos.length / tamanhoLote)}{' '}
               {Math.ceil(fotos.length / tamanhoLote) === 1
@@ -590,6 +593,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
           </div>
         </>
       )}
-    </div>
+      </div>
+    </>
   )
 }

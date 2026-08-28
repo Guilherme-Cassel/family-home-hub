@@ -4,22 +4,23 @@ import type { ComponentProps } from 'react'
 export type BadgeTone = 'neutral' | 'success' | 'warning' | 'danger' | 'info'
 
 const TONES: Record<BadgeTone, string> = {
-  neutral: 'bg-slate-100 text-slate-700 ring-slate-200',
-  success: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
-  warning: 'bg-amber-50 text-amber-800 ring-amber-200',
-  danger: 'bg-red-50 text-red-800 ring-red-200',
-  info: 'bg-sky-50 text-sky-800 ring-sky-200',
+  neutral: 'bg-surface-2 text-ink-2',
+  success: 'bg-ok-soft text-ok-ink',
+  warning: 'bg-warn-soft text-warn-ink',
+  danger: 'bg-danger-soft text-danger-ink',
+  info: 'bg-info-soft text-info-ink',
 }
 
 type Props = ComponentProps<'span'> & { tone?: BadgeTone }
 
+/** Selo em pílula, com fundo suave e texto na tinta do mesmo tom. */
 export function Badge({ tone = 'neutral', className, ...props }: Props) {
   return (
     <span
       {...props}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5',
-        'text-xs font-medium ring-1 ring-inset whitespace-nowrap',
+        'inline-flex items-center gap-1 rounded-full px-2.5 py-1',
+        'text-xs font-semibold whitespace-nowrap',
         TONES[tone],
         className,
       )}

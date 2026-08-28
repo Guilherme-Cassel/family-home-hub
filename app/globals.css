@@ -1,17 +1,118 @@
 @import 'tailwindcss';
 
-@theme {
-  /* Paleta da marca — verde "casa/despensa". */
-  --color-brand-50: oklch(0.97 0.02 155);
-  --color-brand-100: oklch(0.94 0.05 155);
-  --color-brand-200: oklch(0.88 0.09 155);
-  --color-brand-400: oklch(0.74 0.15 155);
-  --color-brand-500: oklch(0.66 0.16 155);
-  --color-brand-600: oklch(0.56 0.14 155);
-  --color-brand-700: oklch(0.46 0.11 155);
+/* ==========================================================================
+   Linguagem visual: One UI (Samsung).
+   Tudo é token — trocar o acento, o raio ou a densidade do app inteiro é
+   mexer só neste arquivo.
+   ========================================================================== */
 
-  /* Altura reservada para a barra de navegação inferior. */
-  --spacing-nav: 5.5rem;
+@theme {
+  /* --- Acento -----------------------------------------------------------
+     Verde da casa. Para o azul Samsung, troque estes três valores (e os do
+     bloco escuro mais abaixo) por #0f7be8 / #e6f1fd / #0a5cb4. */
+  --color-accent: #0b7d59;
+  --color-accent-soft: #e2f5ee;
+  --color-accent-ink: #076b4b;
+
+  /* Cor do texto e dos glifos por cima de um preenchimento cheio.
+     No tema claro os preenchimentos são escuros e pedem branco; no escuro
+     eles são claros e pedem tinta escura. Um token só resolve os dois. */
+  --color-on-fill: #ffffff;
+
+  /* --- Superfícies e texto (tema claro) --------------------------------- */
+  --color-bg: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-surface-2: #eff1f4;
+  --color-line: #e7e9ed;
+  --color-ink: #101114;
+  --color-ink-2: #6b7076;
+  --color-ink-3: #8a9096;
+
+  /* --- Semânticos -------------------------------------------------------
+     Cada um em trio: cheio (fundo de ícone), suave (fundo de selo) e tinta
+     (texto sobre o suave, com contraste suficiente). */
+  --color-danger: #cf3a30;
+  --color-danger-soft: #fdecea;
+  --color-danger-ink: #b3261e;
+
+  --color-warn: #c9760a;
+  --color-warn-soft: #fdf2e0;
+  --color-warn-ink: #8a5407;
+
+  --color-ok: #21a05c;
+  --color-ok-soft: #e6f6ed;
+  --color-ok-ink: #14713e;
+
+  --color-info: #1a73e8;
+  --color-info-soft: #e6f0fd;
+  --color-info-ink: #12539f;
+
+  --color-violet: #7c5cf0;
+
+  /* --- Raios da One UI --------------------------------------------------- */
+  --radius-card: 26px;
+  --radius-item: 18px;
+  --radius-field: 16px;
+
+  /* Altura reservada pela barra de navegação flutuante. */
+  --spacing-nav: 6.75rem;
+
+  /* A Samsung Sans é proprietária e não tem licença web, mas num Galaxy ela
+     já está instalada — por isso vem primeiro. A Onest entra como substituta
+     nos outros aparelhos. */
+  --font-sans:
+    'Samsung Sans', 'SamsungOne', var(--font-onest), system-ui, -apple-system,
+    'Segoe UI', sans-serif;
+}
+
+/* ==========================================================================
+   Tema escuro automático.
+
+   Sem seletor de tema no app de propósito: um app One UI segue o aparelho.
+   Fica fora de qualquer @layer para vencer os valores do @theme na cascata,
+   independentemente da ordem em que o Tailwind emitir as camadas.
+   ========================================================================== */
+
+:root {
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --color-accent: #3fcc97;
+    --color-accent-soft: #10352a;
+    --color-accent-ink: #7fe0bb;
+    --color-on-fill: #0d0f10;
+
+    /* Preto puro, como a One UI faz — economiza bateria em tela OLED. */
+    --color-bg: #000000;
+    --color-surface: #1b1d1f;
+    --color-surface-2: #26292c;
+    --color-line: #2c2f33;
+    --color-ink: #ffffff;
+    --color-ink-2: #9ba0a6;
+    --color-ink-3: #767b81;
+
+    --color-danger: #ff6b60;
+    --color-danger-soft: #3a1f1d;
+    --color-danger-ink: #ff9a92;
+
+    --color-warn: #f5b23f;
+    --color-warn-soft: #3a2c14;
+    --color-warn-ink: #ffcd74;
+
+    --color-ok: #4cc98a;
+    --color-ok-soft: #123726;
+    --color-ok-ink: #7fe0b0;
+
+    --color-info: #62a8ff;
+    --color-info-soft: #16304d;
+    --color-info-ink: #9cc8ff;
+
+    --color-violet: #a48cff;
+  }
 }
 
 @layer base {
@@ -20,7 +121,8 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-bg text-ink antialiased;
+    font-family: var(--font-sans);
     /* Evita o zoom automático do iOS ao focar inputs. */
     font-size: 16px;
   }
@@ -33,8 +135,49 @@
   textarea {
     @apply touch-manipulation;
   }
+
+  /* O anel de foco segue o acento em qualquer tema. */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
 }
+
+/* ==========================================================================
+   Utilitários
+   ========================================================================== */
 
 @utility safe-bottom {
   padding-bottom: max(env(safe-area-inset-bottom), 0.75rem);
+}
+
+/** Encolhe ao toque — o feedback tátil característico da One UI. */
+@utility press {
+  transition: transform 0.12s ease;
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+/** Versão mais forte, para alvos pequenos e redondos. */
+@utility press-sm {
+  transition: transform 0.12s ease;
+
+  &:active {
+    transform: scale(0.9);
+  }
+}
+
+/** Barra translúcida com desfoque, usada no topo e na navegação. */
+@utility glass {
+  background: color-mix(in srgb, var(--color-surface) 88%, transparent);
+  backdrop-filter: blur(22px) saturate(180%);
+}
+
+/** Entrada suave usada quando a Now Bar troca de atividade. */
+@keyframes surgir {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
