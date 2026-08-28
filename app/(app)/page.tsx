@@ -16,7 +16,7 @@ import {
   IconWrench,
 } from '@/components/icons'
 import { CATEGORIA_ALIMENTO } from '@/lib/constants'
-import { hojeIso, isoDeData } from '@/lib/datas'
+import { FUSO_DA_CASA, hojeIso, somarDias } from '@/lib/datas'
 import { formatarData } from '@/lib/formatters'
 import { getDiasAvisoValidade, getNomeDoUsuario } from '@/lib/queries'
 import { rotuloStatusManutencao } from '@/lib/status'
@@ -31,6 +31,7 @@ const LIMITE_DESTAQUE = 3
 /** "Quinta-feira, 27 de agosto" */
 function saudacaoDoDia() {
   const texto = new Date().toLocaleDateString('pt-BR', {
+    timeZone: FUSO_DA_CASA,
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -48,8 +49,7 @@ export default async function DashboardPage() {
   ])
 
   const hoje = hojeIso()
-  const limiteValidade = new Date()
-  limiteValidade.setDate(limiteValidade.getDate() + diasAviso)
+  const limiteValidade = somarDias(hoje, diasAviso)
 
   const [faltando, manutencoes, perecendo, avulsos, totalEstoque] = await Promise.all([
     supabase
@@ -73,7 +73,7 @@ export default async function DashboardPage() {
       .select('id, name, expiration_date', { count: 'exact' })
       .eq('category', CATEGORIA_ALIMENTO)
       .not('expiration_date', 'is', null)
-      .lte('expiration_date', isoDeData(limiteValidade))
+      .lte('expiration_date', limiteValidade)
       .order('expiration_date')
       .limit(LIMITE_DESTAQUE),
 

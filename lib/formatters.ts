@@ -1,4 +1,4 @@
-import { dataDeIso } from './datas'
+import { dataDeIso, FUSO_DA_CASA } from './datas'
 
 const FORMATO_DATA = new Intl.DateTimeFormat('pt-BR', {
   day: '2-digit',
@@ -6,7 +6,17 @@ const FORMATO_DATA = new Intl.DateTimeFormat('pt-BR', {
   year: 'numeric',
 })
 
+/**
+ * Fuso fixo de propósito: este formato roda tanto no servidor quanto no
+ * navegador, e precisa dar o mesmo resultado nos dois para a hidratação não
+ * acusar diferença. O ajuste para o relógio de quem está lendo acontece
+ * depois, no componente `DataHora`.
+ *
+ * Sem o `timeZone`, o servidor formatava em UTC e o histórico aparecia três
+ * horas adiantado.
+ */
 const FORMATO_DATA_HORA = new Intl.DateTimeFormat('pt-BR', {
+  timeZone: FUSO_DA_CASA,
   day: '2-digit',
   month: '2-digit',
   year: 'numeric',

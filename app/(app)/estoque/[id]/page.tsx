@@ -6,7 +6,8 @@ import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { StockItemForm } from '@/components/estoque/StockItemForm'
 import { ConfirmSubmit } from '@/components/ConfirmSubmit'
-import { formatarDataHora, formatarMoeda, formatarQuantidade } from '@/lib/formatters'
+import { DataHora } from '@/components/DataHora'
+import { formatarMoeda, formatarQuantidade } from '@/lib/formatters'
 import { createClient } from '@/lib/supabase/server'
 
 export const metadata = { title: 'Editar item · Casa em Ordem' }
@@ -79,7 +80,7 @@ export default async function ItemPage({
                       <Badge>{ROTULO_MOTIVO[mov.reason] ?? mov.reason}</Badge>
                     </div>
                     <p className="mt-0.5 truncate text-xs text-ink-2">
-                      {formatarDataHora(mov.created_at)}
+                      <DataHora iso={mov.created_at} />
                       {mov.autor ? ` · ${mov.autor.display_name}` : ''}
                     </p>
                   </div>
