@@ -6,9 +6,9 @@ import {
   parseJsonDaIA,
   traduzirErroGemini,
 } from '@/lib/gemini'
-import { normalizarUnidade } from '@/lib/medidas'
+import { sanitizarIdentificacoes } from '@/lib/ia/identificacaoFotos'
 import { createClient } from '@/lib/supabase/server'
-import type { FotoEnviada, IdentificacaoIA } from '@/types/ia'
+import type { FotoEnviada } from '@/types/ia'
 
 export const runtime = 'nodejs'
 
@@ -97,68 +97,6 @@ const SCHEMA = {
   },
 }
 
-/** Descarta o que a IA devolveu fora do contrato, sem derrubar o lote todo. */
-function sanitizar(
-  bruto: unknown,
-  totalFotos: number,
-  catalogo: { id: string }[],
-): IdentificacaoIA[] {
-  if (!Array.isArray(bruto)) return []
-
-  const confiancasValidas = new Set(['alta', 'media', 'baixa'])
-  const vistos = new Set<number>()
-  const resultados: IdentificacaoIA[] = []
-
-  for (const linha of bruto) {
-    if (typeof linha !== 'object' || linha === null) continue
-
-    const registro = linha as Record<string, unknown>
-    const indice = Number(registro.indice)
-
-    if (!Number.isInteger(indice) || indice < 0 || indice >= totalFotos) continue
-    if (vistos.has(indice)) continue
-    vistos.add(indice)
-
-    const confianca = String(registro.confianca ?? '').toLowerCase()
-
-    // O índice do cadastro é resolvido aqui, contra a lista real que foi
-    // enviada no prompt. Um índice inventado ou fora da faixa simplesmente
-    // não vira vínculo, em vez de apontar para o item errado.
-    const indiceCadastro = Number(registro.indice_cadastro)
-    const item =
-      Number.isInteger(indiceCadastro) &&
-      indiceCadastro >= 0 &&
-      indiceCadastro < catalogo.length
-        ? catalogo[indiceCadastro]
-        : null
-
-    // Só passa adiante o rótulo que dá para usar: quantidade positiva e
-    // unidade conhecida pelo app. Qualquer outra coisa vira null, e a revisão
-    // entra com 1 como sempre entrou.
-    const quantidadeEmbalagem = Number(registro.quantidade_embalagem)
-    const unidadeEmbalagem = normalizarUnidade(String(registro.unidade_embalagem ?? ''))
-    const embalagem =
-      Number.isFinite(quantidadeEmbalagem) &&
-      quantidadeEmbalagem > 0 &&
-      unidadeEmbalagem !== null
-        ? { quantidade: quantidadeEmbalagem, unidade: unidadeEmbalagem }
-        : null
-
-    resultados.push({
-      indice,
-      nome_identificado: String(registro.nome_identificado ?? '').trim(),
-      categoria_sugerida: String(registro.categoria_sugerida ?? 'outros').trim(),
-      confianca: confiancasValidas.has(confianca)
-        ? (confianca as IdentificacaoIA['confianca'])
-        : 'baixa',
-      stock_item_id: item?.id ?? null,
-      embalagem,
-    })
-  }
-
-  return resultados
-}
-
 export async function POST(request: Request) {
   // A rota fala com uma API paga por cota: só para quem está autenticado.
   const supabase = await createClient()
@@ -224,7 +162,7 @@ export async function POST(request: Request) {
     })
 
     const bruto = parseJsonDaIA<unknown>(response.text)
-    const resultados = sanitizar(bruto, fotos.length, itens)
+    const resultados = sanitizarIdentificacoes(bruto, fotos.length, itens)
 
     return NextResponse.json({ resultados })
   } catch (erro) {

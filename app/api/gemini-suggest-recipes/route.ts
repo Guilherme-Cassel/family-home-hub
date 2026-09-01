@@ -8,6 +8,7 @@ import {
   parseJsonDaIA,
   traduzirErroGemini,
 } from '@/lib/gemini'
+import { itemPorIndice } from '@/lib/ia/catalogo'
 import { createClient } from '@/lib/supabase/server'
 import type { IngredienteIA, ReceitaIA } from '@/types/ia'
 
@@ -134,11 +135,7 @@ function sanitizarIngredientes(
     // O índice é resolvido aqui, contra a lista real enviada no prompt: um
     // número inventado vira ingrediente sem vínculo em vez de apontar para o
     // item errado e dar baixa no que não foi usado.
-    const indice = Number(registro.indice_cadastro)
-    const item =
-      Number.isInteger(indice) && indice >= 0 && indice < disponiveis.length
-        ? disponiveis[indice]
-        : null
+    const item = itemPorIndice(registro.indice_cadastro, disponiveis)
 
     // Um "disponível" sem vínculo não tem como virar baixa no estoque.
     if (exigeVinculo && !item) continue
