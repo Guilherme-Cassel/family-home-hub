@@ -10,12 +10,16 @@ import { Button } from '@/components/Button'
 import { Card } from '@/components/Card'
 import { PageHeader } from '@/components/PageHeader'
 import { EmptyState } from '@/components/EmptyState'
-import { Input, Select, inputClasses } from '@/components/Field'
+import { Select, inputClasses } from '@/components/Field'
 import { IconCamera, IconPlus, IconTrash } from '@/components/icons'
+import {
+  BotaoDescartar,
+  CampoQuantidade,
+  CamposDeItemNovo,
+} from '@/components/CamposDeRevisao'
 import { CameraContinua } from '@/components/entrada/CameraContinua'
 import type { ItemConhecido } from './EntradaRapidaClient'
 import { salvarEntradas } from '@/lib/actions/entradas'
-import { CATEGORIAS_ESTOQUE, UNIDADES } from '@/lib/constants'
 import { LIMIAR_MATCH_AUTOMATICO, melhorCorrespondencia } from '@/lib/fuzzyMatch'
 import { identificarFotos } from '@/lib/geminiClient'
 import { comprimirImagem, type FotoCapturada } from '@/lib/imagem'
@@ -475,14 +479,10 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removerLinha(linha.fotoId)}
-                        aria-label="Descartar esta foto"
-                        className="press-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-danger-soft hover:text-danger"
-                      >
-                        <IconTrash />
-                      </button>
+                      <BotaoDescartar
+                        aoClicar={() => removerLinha(linha.fotoId)}
+                        rotulo="Descartar esta foto"
+                      />
                     </div>
 
                     <div className="grid grid-cols-[1fr_7rem] gap-2">
@@ -503,57 +503,27 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                         ))}
                       </Select>
 
-                      {/* A unidade fica colada no número: sem ela, "1000" num
-                          item medido em ml parece erro de digitação. */}
-                      <span className="relative block">
-                        <Input
-                          value={linha.quantidade}
-                          onChange={(e) =>
-                            atualizarLinha(linha.fotoId, { quantidade: e.target.value })
-                          }
-                          type="number"
-                          inputMode="decimal"
-                          step="any"
-                          min="0"
-                          aria-label={`Quantidade em ${linha.unidade}`}
-                          className="pr-12"
-                        />
-                        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-2">
-                          {linha.unidade}
-                        </span>
-                      </span>
+                      <CampoQuantidade
+                        valor={linha.quantidade}
+                        aoMudar={(quantidade) =>
+                          atualizarLinha(linha.fotoId, { quantidade })
+                        }
+                        unidade={linha.unidade}
+                        rotulo={`Quantidade em ${linha.unidade}`}
+                      />
                     </div>
 
                     {linha.vinculoId === null ? (
-                      <div className="grid grid-cols-2 gap-2">
-                        <Select
-                          value={linha.categoria}
-                          onChange={(e) =>
-                            atualizarLinha(linha.fotoId, { categoria: e.target.value })
-                          }
-                          aria-label="Categoria do item novo"
-                        >
-                          {CATEGORIAS_ESTOQUE.map((c) => (
-                            <option key={c.valor} value={c.valor}>
-                              {c.rotulo}
-                            </option>
-                          ))}
-                        </Select>
-
-                        <Select
-                          value={linha.unidade}
-                          onChange={(e) =>
-                            atualizarLinha(linha.fotoId, { unidade: e.target.value })
-                          }
-                          aria-label="Unidade do item novo"
-                        >
-                          {UNIDADES.map((u) => (
-                            <option key={u.valor} value={u.valor}>
-                              {u.rotulo}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                      <CamposDeItemNovo
+                        categoria={linha.categoria}
+                        unidade={linha.unidade}
+                        aoMudarCategoria={(categoria) =>
+                          atualizarLinha(linha.fotoId, { categoria })
+                        }
+                        aoMudarUnidade={(unidade) =>
+                          atualizarLinha(linha.fotoId, { unidade })
+                        }
+                      />
                     ) : null}
                   </Card>
                 </li>

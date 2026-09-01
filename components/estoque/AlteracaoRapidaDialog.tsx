@@ -5,11 +5,14 @@ import { useEffect, useRef, useState, useTransition } from 'react'
 import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
-import { Input, Select, Textarea } from '@/components/Field'
-import { IconTrash } from '@/components/icons'
+import { Textarea } from '@/components/Field'
+import {
+  BotaoDescartar,
+  CampoQuantidade,
+  CamposDeItemNovo,
+} from '@/components/CamposDeRevisao'
 import { salvarAlteracoes, type AlteracaoRevisada } from '@/app/(app)/estoque/actions'
 import { cn } from '@/lib/cn'
-import { CATEGORIAS_ESTOQUE, UNIDADES } from '@/lib/constants'
 import { interpretarAlteracao } from '@/lib/geminiClient'
 import type { StockItem } from '@/types/domain'
 
@@ -286,34 +289,20 @@ export function AlteracaoRapidaDialog({ itens, aoFechar }: Props) {
                         </p>
                       </div>
 
-                      <span className="relative block w-28 shrink-0">
-                        <Input
-                          value={linha.quantidade}
-                          onChange={(e) =>
-                            mudarLinha(linha.id, { quantidade: e.target.value })
-                          }
-                          type="number"
-                          inputMode="decimal"
-                          step="any"
-                          min="0"
-                          aria-label={`Quantidade de ${linha.nome} em ${linha.unidade}`}
-                          className="pr-12"
-                        />
-                        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-2">
-                          {linha.unidade}
-                        </span>
-                      </span>
+                      <CampoQuantidade
+                        valor={linha.quantidade}
+                        aoMudar={(quantidade) => mudarLinha(linha.id, { quantidade })}
+                        unidade={linha.unidade}
+                        rotulo={`Quantidade de ${linha.nome} em ${linha.unidade}`}
+                        className="w-28 shrink-0"
+                      />
 
-                      <button
-                        type="button"
-                        onClick={() =>
+                      <BotaoDescartar
+                        aoClicar={() =>
                           setLinhas((atuais) => atuais.filter((l) => l.id !== linha.id))
                         }
-                        aria-label={`Tirar ${linha.nome} da lista`}
-                        className="press-sm flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-ink-3 hover:bg-danger-soft hover:text-danger"
-                      >
-                        <IconTrash />
-                      </button>
+                        rotulo={`Tirar ${linha.nome} da lista`}
+                      />
                     </div>
 
                     {linha.falado || linha.duvidoso || novo ? (
@@ -331,35 +320,17 @@ export function AlteracaoRapidaDialog({ itens, aoFechar }: Props) {
                     {/* Categoria e unidade só aparecem para item novo: são os
                         campos que o cadastro precisa e que a fala não dá. */}
                     {novo ? (
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        <Select
-                          value={linha.categoria}
-                          onChange={(e) =>
-                            mudarLinha(linha.id, { categoria: e.target.value })
-                          }
-                          aria-label={`Categoria de ${linha.nome}`}
-                        >
-                          {CATEGORIAS_ESTOQUE.map((c) => (
-                            <option key={c.valor} value={c.valor}>
-                              {c.rotulo}
-                            </option>
-                          ))}
-                        </Select>
-
-                        <Select
-                          value={linha.unidade}
-                          onChange={(e) =>
-                            mudarLinha(linha.id, { unidade: e.target.value })
-                          }
-                          aria-label={`Unidade de ${linha.nome}`}
-                        >
-                          {UNIDADES.map((u) => (
-                            <option key={u.valor} value={u.valor}>
-                              {u.rotulo}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
+                      <CamposDeItemNovo
+                        categoria={linha.categoria}
+                        unidade={linha.unidade}
+                        aoMudarCategoria={(categoria) =>
+                          mudarLinha(linha.id, { categoria })
+                        }
+                        aoMudarUnidade={(unidade) => mudarLinha(linha.id, { unidade })}
+                        rotuloCategoria={`Categoria de ${linha.nome}`}
+                        rotuloUnidade={`Unidade de ${linha.nome}`}
+                        className="mt-2"
+                      />
                     ) : null}
                   </li>
                 )
