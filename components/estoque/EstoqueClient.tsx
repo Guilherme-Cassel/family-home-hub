@@ -4,12 +4,13 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
-import { ButtonLink, IconButtonLink } from '@/components/Button'
+import { ButtonLink, IconButton, IconButtonLink } from '@/components/Button'
 import { CardGroup } from '@/components/Card'
 import { EmptyState } from '@/components/EmptyState'
 import { Input, Select } from '@/components/Field'
 import { PageHeader } from '@/components/PageHeader'
-import { IconChevronRight, IconPlus, IconSearch } from '@/components/icons'
+import { IconChevronRight, IconMic, IconPlus, IconSearch } from '@/components/icons'
+import { AlteracaoRapidaDialog } from './AlteracaoRapidaDialog'
 import { QuantityStepper } from './QuantityStepper'
 import { CATEGORIAS_ESTOQUE, rotuloCategoriaEstoque } from '@/lib/constants'
 import { formatarData } from '@/lib/formatters'
@@ -26,6 +27,7 @@ export function EstoqueClient({ itens, diasAvisoValidade }: Props) {
   const [busca, setBusca] = useState('')
   const [categoria, setCategoria] = useState('')
   const [erro, setErro] = useState<string | null>(null)
+  const [alteracaoAberta, setAlteracaoAberta] = useState(false)
 
   // A casa tem dezenas de itens, não milhares: filtrar no cliente evita um
   // round-trip por tecla digitada no celular.
@@ -50,11 +52,24 @@ export function EstoqueClient({ itens, diasAvisoValidade }: Props) {
         titulo="Estoque"
         subtitulo={`${itens.length} ${itens.length === 1 ? 'item cadastrado' : 'itens cadastrados'}`}
         acao={
-          <IconButtonLink href="/estoque/novo" aria-label="Cadastrar novo item">
-            <IconPlus />
-          </IconButtonLink>
+          <>
+            <IconButton
+              onClick={() => setAlteracaoAberta(true)}
+              aria-label="Alteração rápida"
+              disabled={itens.length === 0}
+            >
+              <IconMic />
+            </IconButton>
+            <IconButtonLink href="/estoque/novo" aria-label="Cadastrar novo item">
+              <IconPlus />
+            </IconButtonLink>
+          </>
         }
       />
+
+      {alteracaoAberta ? (
+        <AlteracaoRapidaDialog itens={itens} aoFechar={() => setAlteracaoAberta(false)} />
+      ) : null}
 
       <div className="space-y-4">
         <div className="space-y-2">

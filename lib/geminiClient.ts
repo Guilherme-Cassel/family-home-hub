@@ -1,4 +1,4 @@
-import type { FotoEnviada, IdentificacaoIA, ReceitaIA } from '@/types/ia'
+import type { AlteracaoIA, FotoEnviada, IdentificacaoIA, ReceitaIA } from '@/types/ia'
 
 /**
  * Chamadas às rotas de IA a partir do navegador.
@@ -50,6 +50,22 @@ export async function identificarFotos(
   )
 
   return resultados
+}
+
+/**
+ * Interpreta uma frase de alteração do estoque, para os dois lados: "usei um
+ * ovo e comprei dois litros de leite" vira uma saída e uma entrada.
+ *
+ * Não recebe o estoque: a rota lê no servidor, com a mesma sessão, e resolve
+ * ali o item de cada trecho da frase.
+ */
+export async function interpretarAlteracao(texto: string): Promise<AlteracaoIA[]> {
+  const { alteracoes } = await postJson<{ alteracoes: AlteracaoIA[] }>(
+    '/api/gemini-alteracao',
+    { texto },
+  )
+
+  return alteracoes
 }
 
 /**

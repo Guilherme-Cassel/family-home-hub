@@ -2,8 +2,9 @@
 
 import { revalidatePath } from 'next/cache'
 import { redirect } from 'next/navigation'
+import { agruparEntradas } from '@/lib/entradas'
 import { requireUser } from '@/lib/supabase/auth'
-import type { StockMovementReason } from '@/types/domain'
+import type { StockEntry, StockMovementReason } from '@/types/domain'
 
 export type FormState = { error?: string }
 
@@ -139,4 +140,81 @@ export async function ajustarQuantidade(
 
   revalidarTelasDeEstoque()
   return {}
+}
+
+/** Uma linha da alteração rápida, já revisada na tela. */
+export type AlteracaoRevisada = {
+  /** null quando é produto que ainda não existe no cadastro. */
+  stock_item_id: string | null
+  /** Dados para criar o item, quando não há `stock_item_id`. */
+  novo_item?: { name: string; category: string; unit: string }
+  quantidade: number
+  tipo: 'entrada' | 'saida'
+}
+
+/**
+ * Aplica várias alterações de uma vez, vindas da alteração rápida.
+ *
+ * Passa pelo mesmo `apply_stock_entries` da entrada por foto: se uma linha
+ * falhar, nenhuma entra — não dá para registrar metade da compra nem metade do
+ * jantar. Linhas repetidas do mesmo item e do mesmo lado são somadas antes,
+ * porque "usei um ovo e depois mais um ovo" é uma baixa de dois.
+ *
+ * Saída vira movimentação de consumo; entrada vira compra, que é de onde vem
+ * quase toda reposição ditada — voltando do mercado.
+ *
+ * Entrada de produto que ainda não existe cria o cadastro na hora, dentro da
+ * mesma transação. Saída não: dar baixa em algo que a casa nunca teve seria
+ * criar um item para deixá-lo em zero.
+ */
+export async function salvarAlteracoes(
+  alteracoes: AlteracaoRevisada[],
+): Promise<FormState & { total?: number }> {
+  const { supabase } = await requireUser()
+
+  if (alteracoes.length === 0) {
+    return { error: 'Nenhuma alteração para gravar.' }
+  }
+
+  // Server Action é endpoint público: a tela já filtra, mas não dá para
+  // confiar só nela.
+  for (const alteracao of alteracoes) {
+    if (!Number.isFinite(alteracao.quantidade) || alteracao.quantidade <= 0) {
+      return { error: 'Há linhas com quantidade inválida.' }
+    }
+    if (!alteracao.stock_item_id) {
+      if (!alteracao.novo_item?.name?.trim()) {
+        return { error: 'Há linhas sem item vinculado nem nome para criar.' }
+      }
+      if (alteracao.tipo !== 'entrada') {
+        return { error: 'Só dá para dar baixa em item que já existe no estoque.' }
+      }
+    }
+  }
+
+  const entradas: StockEntry[] = alteracoes.map((alteracao) => ({
+    stock_item_id: alteracao.stock_item_id,
+    new_item: alteracao.stock_item_id
+      ? undefined
+      : {
+          name: alteracao.novo_item?.name.trim() ?? '',
+          category: alteracao.novo_item?.category || 'outros',
+          unit: alteracao.novo_item?.unit || 'un',
+          minimum_quantity: 0,
+        },
+    quantity_change:
+      alteracao.tipo === 'entrada' ? alteracao.quantidade : -alteracao.quantidade,
+    reason: alteracao.tipo === 'entrada' ? ('compra' as const) : ('consumo' as const),
+  }))
+
+  const { data, error } = await supabase.rpc('apply_stock_entries', {
+    p_entries: agruparEntradas(entradas),
+  })
+
+  if (error) {
+    return { error: `Não foi possível gravar as alterações: ${error.message}` }
+  }
+
+  revalidarTelasDeEstoque()
+  return { total: data ?? alteracoes.length }
 }

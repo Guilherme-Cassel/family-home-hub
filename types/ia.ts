@@ -44,6 +44,47 @@ export type IdentificacaoIA = {
 }
 
 /**
+ * Um item que a frase da alteração rápida mencionou.
+ *
+ * A quantidade já vem **na unidade em que o item está cadastrado**: a frase
+ * fala "meio litro" e o leite está em ml, então chega 500. A conversão é feita
+ * no servidor, com a tabela de `lib/medidas.ts`.
+ */
+export type AlteracaoIA = {
+  /**
+   * Para que lado o estoque anda: `saida` quando a frase fala de gastar
+   * ("usei", "comi", "acabou"), `entrada` quando fala de repor ("comprei",
+   * "trouxe do mercado").
+   *
+   * A revisão mostra o sinal e deixa inverter num toque — é lá que um "peguei"
+   * ambíguo se resolve, não aqui.
+   */
+  tipo: 'entrada' | 'saida'
+  /** Item do cadastro, ou null quando a frase citou algo que não existe lá. */
+  stock_item_id: string | null
+  /** Nome do item cadastrado, ou o que a pessoa falou quando não achou. */
+  nome: string
+  /**
+   * Categoria sugerida, usada só quando não há cadastro: uma entrada de item
+   * novo precisa dela para nascer. Para item já cadastrado, vem vazia.
+   */
+  categoria: string
+  quantidade: number
+  unidade: string
+  /**
+   * Como a medida foi dita, quando difere da unidade do cadastro: "0.5 L" para
+   * um item em ml. Serve para a revisão mostrar de onde veio o número.
+   */
+  falado: string | null
+  /**
+   * false quando não deu para converter a medida falada para a unidade do item
+   * (falar "dois pacotes" de algo cadastrado em kg). O número passa adiante
+   * como foi dito, e a revisão pede conferência.
+   */
+  convertido: boolean
+}
+
+/**
  * Um ingrediente de receita, com quantidade.
  *
  * Para os que já estão na despensa, a quantidade vem **na mesma unidade em
