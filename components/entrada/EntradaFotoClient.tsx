@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useRef, useState, useTransition } from 'react'
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react'
 import { Alert } from '@/components/Alert'
 import { Badge } from '@/components/Badge'
 import { Button } from '@/components/Button'
@@ -12,12 +12,14 @@ import { PageHeader } from '@/components/PageHeader'
 import { EmptyState } from '@/components/EmptyState'
 import { Input, Select, inputClasses } from '@/components/Field'
 import { IconCamera, IconPlus, IconTrash } from '@/components/icons'
+import { CameraContinua } from '@/components/entrada/CameraContinua'
 import type { ItemConhecido } from './EntradaRapidaClient'
 import { salvarEntradas } from '@/lib/actions/entradas'
 import { CATEGORIAS_ESTOQUE, UNIDADES } from '@/lib/constants'
 import { LIMIAR_MATCH_AUTOMATICO, melhorCorrespondencia } from '@/lib/fuzzyMatch'
 import { identificarFotos } from '@/lib/geminiClient'
 import { comprimirImagem, type FotoCapturada } from '@/lib/imagem'
+import { normalizar } from '@/lib/texto'
 import type { StockEntry } from '@/types/domain'
 import type { NivelConfianca } from '@/types/ia'
 
@@ -50,6 +52,10 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
   const [progresso, setProgresso] = useState({ de: 0, ate: 0, total: 0 })
   const [erro, setErro] = useState<string | null>(null)
   const [erroDeCota, setErroDeCota] = useState(false)
+  const [camera, setCamera] = useState(false)
+  // Quando a câmera do app não abre, a captura pelo app do celular volta a
+  // aparecer como saída — é o caminho antigo, um toque a mais por foto.
+  const [semCamera, setSemCamera] = useState(false)
   const [salvando, startTransition] = useTransition()
 
   // As miniaturas são blob: URLs; sem revoke elas seguram memória até a aba
@@ -106,6 +112,17 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
       )
     }
   }
+
+  const aoConcluirCamera = useCallback((novas: FotoCapturada[]) => {
+    setCamera(false)
+    if (novas.length > 0) setFotos((atuais) => [...atuais, ...novas])
+  }, [])
+
+  const aoFalharCamera = useCallback((mensagem: string) => {
+    setCamera(false)
+    setSemCamera(true)
+    setErro(mensagem)
+  }, [])
 
   function removerFoto(id: string) {
     setFotos((atuais) => {
@@ -253,6 +270,15 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
   const pendentes = linhas.filter(
     (linha) => linha.vinculoId === null && linha.nome.trim() === '',
   ).length
+
+  // Uma foto por embalagem: cinco pacotes iguais viram cinco linhas, mas um
+  // produto só. O rodapé diz isso antes de salvar, para a soma na despensa não
+  // surpreender depois.
+  const produtos = new Set(
+    linhas
+      .filter((linha) => linha.vinculoId !== null || linha.nome.trim() !== '')
+      .map((linha) => linha.vinculoId ?? `novo:${normalizar(linha.nome)}`),
+  ).size
 
   function confirmar() {
     setErro(null)
@@ -484,7 +510,10 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
         {linhas.length > 0 ? (
           <div className="glass sticky bottom-nav z-20 -mx-5 rounded-card px-5 py-3">
             <p className="mb-2 text-xs text-ink-2">
-              {linhas.length} {linhas.length === 1 ? 'item' : 'itens'}
+              {linhas.length} {linhas.length === 1 ? 'foto' : 'fotos'}
+              {produtos > 0 && produtos < linhas.length
+                ? ` · ${produtos} ${produtos === 1 ? 'produto' : 'produtos'} (fotos do mesmo produto somam)`
+                : ''}
               {pendentes > 0 ? ` · ${pendentes} sem vínculo` : ''}
             </p>
             <Button size="lg" className="w-full" onClick={confirmar} disabled={salvando}>
@@ -498,11 +527,15 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
   }
 
   // Etapa 1 — captura
+  if (camera) {
+    return <CameraContinua aoConcluir={aoConcluirCamera} aoFalhar={aoFalharCamera} />
+  }
+
   return (
     <>
       <PageHeader
         titulo="Fotografar as compras"
-        subtitulo="Tire uma foto por produto. Nada é enviado até você tocar em processar."
+        subtitulo="Tire uma foto por produto, uma atrás da outra. Nada é enviado até você tocar em processar."
         voltar="/entrada"
       />
 
@@ -523,18 +556,33 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
       ) : null}
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-item bg-accent px-4 font-semibold text-on-fill">
-          <IconCamera width={20} height={20} />
-          Tirar foto
-          <input
-            type="file"
-            accept="image/*"
-            capture="environment"
-            multiple
-            onChange={aoEscolherArquivos}
-            className="sr-only"
-          />
-        </label>
+        {semCamera ? (
+          // Plano B: a câmera do sistema, que pede confirmação a cada foto.
+          <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-item bg-accent px-4 font-semibold text-on-fill">
+            <IconCamera width={20} height={20} />
+            Tirar foto
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              multiple
+              onChange={aoEscolherArquivos}
+              className="sr-only"
+            />
+          </label>
+        ) : (
+          <button
+            type="button"
+            onClick={() => {
+              setErro(null)
+              setCamera(true)
+            }}
+            className="flex h-13 items-center justify-center gap-2 rounded-item bg-accent px-4 font-semibold text-on-fill active:scale-[0.99]"
+          >
+            <IconCamera width={20} height={20} />
+            Abrir câmera
+          </button>
+        )}
 
         <label className="flex h-13 cursor-pointer items-center justify-center gap-2 rounded-item bg-surface px-4 font-medium text-ink ring-1 ring-line active:bg-surface-2">
           <IconPlus width={20} height={20} />
@@ -552,7 +600,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
       {fotos.length === 0 ? (
         <EmptyState
           title="Nenhuma foto ainda"
-          description="Fotografe os produtos um a um. Dá para tirar várias em sequência e revisar antes de enviar."
+          description="Abra a câmera e fotografe os produtos em sequência, sem confirmar cada foto. No fim, revise tudo antes de enviar."
         />
       ) : (
         <>

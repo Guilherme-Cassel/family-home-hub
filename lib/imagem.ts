@@ -42,7 +42,7 @@ type Decodificada = {
  * navegadores e com formatos como HEIC do iPhone, então há um plano B com
  * `<img>`, que os navegadores atuais também orientam pelo EXIF.
  */
-async function decodificar(arquivo: File): Promise<Decodificada> {
+async function decodificar(arquivo: Blob): Promise<Decodificada> {
   if (typeof createImageBitmap === 'function') {
     try {
       const bitmap = await createImageBitmap(arquivo, {
@@ -87,8 +87,11 @@ async function decodificar(arquivo: File): Promise<Decodificada> {
  * Uma foto de celular moderno passa de 4 MB, e um lote estouraria o limite de
  * corpo da requisição — além de gastar dados móveis à toa: para reconhecer uma
  * embalagem, 1024px de lado é de sobra.
+ *
+ * Aceita `Blob`, não só `File`: os quadros capturados pela câmera contínua
+ * saem do canvas como Blob e passam exatamente pelo mesmo caminho.
  */
-export async function comprimirImagem(arquivo: File): Promise<FotoCapturada> {
+export async function comprimirImagem(arquivo: Blob): Promise<FotoCapturada> {
   const { fonte, largura, altura, liberar } = await decodificar(arquivo)
 
   try {
