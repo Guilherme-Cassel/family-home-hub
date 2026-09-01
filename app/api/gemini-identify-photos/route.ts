@@ -6,6 +6,7 @@ import {
   parseJsonDaIA,
   traduzirErroGemini,
 } from '@/lib/gemini'
+import { normalizarUnidade } from '@/lib/medidas'
 import { createClient } from '@/lib/supabase/server'
 import type { FotoEnviada, IdentificacaoIA } from '@/types/ia'
 
@@ -38,6 +39,13 @@ Para CADA imagem, identifique o produto e devolva um objeto com:
   farmacia, outros.
 - "confianca": "alta" se você reconhece o produto com clareza, "media" se tem
   dúvida sobre o tipo exato, "baixa" se a foto está ruim, cortada ou ambígua.
+- "quantidade_embalagem" e "unidade_embalagem": o conteúdo declarado no rótulo,
+  exatamente na medida em que ele está escrito. Uma caixinha de leite de 1 L é
+  quantidade 1 e unidade "L", não 1000 e "ml". Um pacote de 500 g é 500 e "g".
+  A unidade tem que ser uma destas: "un", "kg", "g", "L", "ml", "pct", "cx".
+  Se a embalagem trouxer várias porções (por exemplo "6 x 90 g"), some o total
+  e devolva 540 e "g". Se o rótulo não estiver legível na foto, devolva
+  quantidade 0 e unidade "" — não estime pelo tamanho aparente do produto.
 - "indice_cadastro": explicado abaixo.
 
 ${
@@ -73,6 +81,8 @@ const SCHEMA = {
       nome_identificado: { type: Type.STRING },
       categoria_sugerida: { type: Type.STRING },
       confianca: { type: Type.STRING, enum: ['alta', 'media', 'baixa'] },
+      quantidade_embalagem: { type: Type.NUMBER },
+      unidade_embalagem: { type: Type.STRING },
       indice_cadastro: { type: Type.INTEGER },
     },
     required: [
@@ -80,6 +90,8 @@ const SCHEMA = {
       'nome_identificado',
       'categoria_sugerida',
       'confianca',
+      'quantidade_embalagem',
+      'unidade_embalagem',
       'indice_cadastro',
     ],
   },
@@ -120,6 +132,18 @@ function sanitizar(
         ? catalogo[indiceCadastro]
         : null
 
+    // Só passa adiante o rótulo que dá para usar: quantidade positiva e
+    // unidade conhecida pelo app. Qualquer outra coisa vira null, e a revisão
+    // entra com 1 como sempre entrou.
+    const quantidadeEmbalagem = Number(registro.quantidade_embalagem)
+    const unidadeEmbalagem = normalizarUnidade(String(registro.unidade_embalagem ?? ''))
+    const embalagem =
+      Number.isFinite(quantidadeEmbalagem) &&
+      quantidadeEmbalagem > 0 &&
+      unidadeEmbalagem !== null
+        ? { quantidade: quantidadeEmbalagem, unidade: unidadeEmbalagem }
+        : null
+
     resultados.push({
       indice,
       nome_identificado: String(registro.nome_identificado ?? '').trim(),
@@ -128,6 +152,7 @@ function sanitizar(
         ? (confianca as IdentificacaoIA['confianca'])
         : 'baixa',
       stock_item_id: item?.id ?? null,
+      embalagem,
     })
   }
 

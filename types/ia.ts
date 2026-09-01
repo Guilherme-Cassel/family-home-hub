@@ -31,6 +31,16 @@ export type IdentificacaoIA = {
    * a lista real, então um índice inventado nunca vira vínculo.
    */
   stock_item_id: string | null
+  /**
+   * O conteúdo declarado na embalagem, como está escrito nela: `{ quantidade:
+   * 1, unidade: 'L' }` para uma caixinha de leite de 1 litro.
+   *
+   * Vem cru, na unidade do rótulo, e é convertido para a unidade do item
+   * cadastrado no cliente — a tabela de conversão fica em `lib/medidas.ts`,
+   * fora do alcance de palpite do modelo. Null quando o rótulo não está
+   * legível na foto.
+   */
+  embalagem: { quantidade: number; unidade: string } | null
 }
 
 /**

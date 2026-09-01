@@ -19,6 +19,7 @@ import { CATEGORIAS_ESTOQUE, UNIDADES } from '@/lib/constants'
 import { LIMIAR_MATCH_AUTOMATICO, melhorCorrespondencia } from '@/lib/fuzzyMatch'
 import { identificarFotos } from '@/lib/geminiClient'
 import { comprimirImagem, type FotoCapturada } from '@/lib/imagem'
+import { converterMedida } from '@/lib/medidas'
 import { normalizar } from '@/lib/texto'
 import type { StockEntry } from '@/types/domain'
 import type { NivelConfianca } from '@/types/ia'
@@ -37,6 +38,27 @@ type Linha = {
   quantidade: string
   /** Se o vínculo veio de casamento automático, para sinalizar na tela. */
   automatico: boolean
+  /**
+   * O que estava escrito no rótulo, na medida do rótulo. Guardado porque
+   * trocar o vínculo na revisão muda a unidade de destino e a quantidade
+   * precisa ser convertida de novo, a partir do original.
+   */
+  embalagem: { quantidade: number; unidade: string } | null
+}
+
+/**
+ * Quanto entra no estoque, na unidade do item de destino.
+ *
+ * Sem rótulo legível, ou entre unidades que não se convertem (uma caixinha de
+ * 1 L num item cadastrado em "un"), volta 1 — o mesmo padrão de sempre, que a
+ * revisão corrige em um toque.
+ */
+function quantidadeNaUnidade(
+  embalagem: Linha['embalagem'],
+  unidadeDestino: string,
+): number {
+  if (!embalagem) return 1
+  return converterMedida(embalagem.quantidade, embalagem.unidade, unidadeDestino) ?? 1
 }
 
 type Props = {
@@ -143,6 +165,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
     categoria: string,
     confianca: NivelConfianca,
     stockItemId: string | null,
+    embalagem: Linha['embalagem'],
   ): Linha {
     // Sinal 1, mais forte: a própria IA apontou um item do cadastro. Ela vê a
     // lista junto com as fotos e sabe que "Caixinha de Leite 1L" e uma caixa
@@ -169,16 +192,22 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
     const automatico = escolhidoPelaIA !== null || porTexto
     const vinculado = escolhidoPelaIA ?? (porTexto ? correspondencia.item : null)
 
+    // Item cadastrado manda na unidade: é nela que a despensa é medida. Item
+    // novo herda a unidade do próprio rótulo, então uma caixinha de 1 L entra
+    // como 1 L e não como 1 un.
+    const unidade = vinculado?.unit ?? embalagem?.unidade ?? 'un'
+
     return {
       fotoId: foto.id,
       preview: foto.preview,
       nome: vinculado?.name ?? nome,
       categoria: vinculado?.category ?? categoria,
-      unidade: vinculado?.unit ?? 'un',
+      unidade,
       confianca,
       vinculoId: vinculado?.id ?? null,
-      quantidade: '1',
+      quantidade: String(quantidadeNaUnidade(embalagem, unidade)),
       automatico,
+      embalagem,
     }
   }
 
@@ -211,6 +240,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
               resultado?.categoria_sugerida ?? 'outros',
               resultado?.confianca ?? 'baixa',
               resultado?.stock_item_id ?? null,
+              resultado?.embalagem ?? null,
             ),
           )
         })
@@ -256,6 +286,17 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
             atualizada.unidade = escolhido.unit
             atualizada.categoria = escolhido.category
           }
+        }
+
+        // A unidade de destino mudou, então a quantidade tem de ser convertida
+        // de novo a partir do rótulo — 1 L vira 1000 num item em ml e 1 num
+        // item em un. Só quando muda vínculo ou unidade: fora disso, o número
+        // na tela é do usuário e ninguém mexe nele.
+        const trocouUnidade = atualizada.unidade !== linha.unidade
+        if (trocouUnidade && (mudanca.vinculoId !== undefined || mudanca.unidade !== undefined)) {
+          atualizada.quantidade = String(
+            quantidadeNaUnidade(atualizada.embalagem, atualizada.unidade),
+          )
         }
 
         return atualizada
@@ -425,6 +466,12 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                           >
                             IA: confiança {linha.confianca}
                           </Badge>
+                          {linha.embalagem ? (
+                            <Badge tone="neutral">
+                              Rótulo: {linha.embalagem.quantidade}{' '}
+                              {linha.embalagem.unidade}
+                            </Badge>
+                          ) : null}
                         </div>
                       </div>
 
@@ -438,7 +485,7 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                       </button>
                     </div>
 
-                    <div className="grid grid-cols-[1fr_5rem] gap-2">
+                    <div className="grid grid-cols-[1fr_7rem] gap-2">
                       <Select
                         value={linha.vinculoId ?? ''}
                         onChange={(e) =>
@@ -456,17 +503,25 @@ export function EntradaFotoClient({ itens, tamanhoLote }: Props) {
                         ))}
                       </Select>
 
-                      <Input
-                        value={linha.quantidade}
-                        onChange={(e) =>
-                          atualizarLinha(linha.fotoId, { quantidade: e.target.value })
-                        }
-                        type="number"
-                        inputMode="decimal"
-                        step="any"
-                        min="0"
-                        aria-label="Quantidade"
-                      />
+                      {/* A unidade fica colada no número: sem ela, "1000" num
+                          item medido em ml parece erro de digitação. */}
+                      <span className="relative block">
+                        <Input
+                          value={linha.quantidade}
+                          onChange={(e) =>
+                            atualizarLinha(linha.fotoId, { quantidade: e.target.value })
+                          }
+                          type="number"
+                          inputMode="decimal"
+                          step="any"
+                          min="0"
+                          aria-label={`Quantidade em ${linha.unidade}`}
+                          className="pr-12"
+                        />
+                        <span className="pointer-events-none absolute top-1/2 right-3 -translate-y-1/2 text-sm text-ink-2">
+                          {linha.unidade}
+                        </span>
+                      </span>
                     </div>
 
                     {linha.vinculoId === null ? (
