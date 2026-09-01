@@ -1,6 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
+import { agruparEntradas } from '@/lib/entradas'
 import { requireUser } from '@/lib/supabase/auth'
 import type { StockEntry } from '@/types/domain'
 
@@ -13,6 +14,9 @@ export type ResultadoEntradas = { error?: string; total?: number }
  * foto. A gravação inteira acontece dentro de `apply_stock_entries`, no
  * Postgres: se qualquer linha falhar, nenhuma entra — o usuário não fica com
  * meia compra registrada.
+ *
+ * Linhas do mesmo produto são somadas antes de ir para o banco: cinco fotos de
+ * cinco pacotes iguais são uma compra de cinco unidades, não cinco compras.
  */
 export async function salvarEntradas(
   entradas: StockEntry[],
@@ -34,8 +38,10 @@ export async function salvarEntradas(
     }
   }
 
+  const agrupadas = agruparEntradas(entradas)
+
   const { data, error } = await supabase.rpc('apply_stock_entries', {
-    p_entries: entradas,
+    p_entries: agrupadas,
   })
 
   if (error) {
@@ -46,5 +52,5 @@ export async function salvarEntradas(
   revalidatePath('/compras')
   revalidatePath('/')
 
-  return { total: data ?? entradas.length }
+  return { total: data ?? agrupadas.length }
 }
