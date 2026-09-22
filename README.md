@@ -1,4 +1,4 @@
-# Casa em Ordem
+# Home Hub
 
 A family household web app for tracking pantry stock and recurring home maintenance. Multi-user, single household: everyone who logs in sees and edits everything, and every record keeps who did what.
 
